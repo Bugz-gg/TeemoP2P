@@ -12,6 +12,7 @@ type Peer struct {
 	IP     string
 	Port   string
 	Status string
+	files []File
 }
 
 func errorCheck(err error) {
@@ -90,3 +91,5 @@ func (p *Peer) StartPeer() {
 	sockfd.Write([]byte(message))
 
 }
+
+// Reprise du téléchargement en cas d'erreur avec un fichier d'opérations.

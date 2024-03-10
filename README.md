@@ -1,6 +1,10 @@
-## Eirb2Share
+# Eirb2Share
 
-# Git
+## Git
 ```bash
     git clone ssh://git@thor.enseirb-matmeca.fr:2222/git/free-eirb2share-T4
 ```
+
+
+Tracker:
+`exit` : Exit the tracker.

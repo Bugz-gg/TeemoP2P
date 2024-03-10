@@ -9,8 +9,9 @@ import (
 )
 
 type Peer struct {
-	ID      string
-	Address string
+	IP     string
+	Port   string
+	Status string
 }
 
 func errorCheck(err error) {
@@ -20,57 +21,72 @@ func errorCheck(err error) {
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func GetConfig() Peer {
+	file, err := os.Open("./config.ini")
+	errorCheck(err)
+	var peer Peer
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "=", 2)
+
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+
+			switch key {
+			case "tracker-address":
+				peer.IP = value
+			case "tracker-port":
+				peer.Port = value
+			}
+		}
+	}
+	peer.Status = "tracker"
+	return peer
+}
+
+func (p *Peer) StartListening() {
+
+	// peers := make(map[string]Peer)
+	server, err := net.Listen("tcp", p.IP+":"+p.Port)
+	errorCheck(err)
+
+	defer server.Close()
+	fmt.Println("Listening on " + p.IP + ":" + p.Port)
+	fmt.Println("Waiting for client...")
+
+	conn, err := server.Accept()
+	errorCheck(err)
 	defer conn.Close()
-
-	fmt.Println("Connection established from", conn.RemoteAddr())
-
-	reader := bufio.NewReader(conn)
+	if p.Status == "tracker" {
+		//tools de kevin
+	}
 	for {
-		message, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading from connection:", err)
-			return
-		}
-		fmt.Print("Received message:", message)
+		buffer := make([]byte, 256)
+		n, err := conn.Read(buffer)
+		errorCheck(err)
 
-		if strings.TrimSpace(message) == "exit" {
-			return
+		if n > 0 {
+			fmt.Print("<Message> ", string(buffer[:n]))
+			_, err := conn.Write(buffer[:n])
+			errorCheck(err)
 		}
-
-		fmt.Print(">")
-		response, _ := reader.ReadString('\n')
-		conn.Write([]byte(response))
 	}
 }
 
-func (p *Peer) Start(targetAddr string, clientMode bool) {
-	if clientMode {
-		// Peer acts as a client, initiates connection to target address
-		targetTCPAddr, err := net.ResolveTCPAddr("tcp", targetAddr)
-		errorCheck(err)
+func (p *Peer) StartPeer() {
+	go p.StartListening()
+	message := "< annonce listen " + p.Port + "[]"
+	tracker := GetConfig()
+	serv_tcp_addr, err := net.ResolveTCPAddr("tcp", tracker.IP+":"+tracker.Port)
+	errorCheck(err)
 
-		conn, err := net.DialTCP("tcp", nil, targetTCPAddr)
-		errorCheck(err)
+	sockfd, err := net.DialTCP("tcp", nil, serv_tcp_addr)
+	errorCheck(err)
+	sockfd.Write([]byte(message))
 
-		fmt.Printf("Peer %s connected to %s\n", p.ID, targetAddr)
-
-		go handleConnection(conn)
-	} else {
-		// Peer acts as a server, listens for incoming connections
-		listening, err := net.Listen("tcp", p.Address)
-		errorCheck(err)
-		defer listening.Close()
-
-		fmt.Printf("Peer %s listening on %s\n", p.ID, p.Address)
-
-		for {
-			conn, err := listening.Accept()
-			if err != nil {
-				fmt.Println("Error accepting connection:", err)
-				continue
-			}
-			go handleConnection(conn)
-		}
-	}
 }

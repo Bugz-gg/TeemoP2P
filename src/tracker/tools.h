@@ -37,4 +37,17 @@ struct file {
 
 int streq(char *, char *);
 
+void set_bit(BufferMap, int);
+void clear_bit(BufferMap, int);
+int is_bit_set(BufferMap, int);
+
+regex_t *announce_regex();
+announceData announceCheck(char *);
+void printAnnounceData(announceData);
+void free_announceData(announceData *);
+
+void free_regex(regex_t);
+void free_file(File *);
+
+
 #endif //TOOLS_H

@@ -31,12 +31,12 @@ void clear_bit(BufferMap buffer_map, int n) {
     buffer_map.bit_sequence[n / BITS_PER_INT] &= ~(1 << (n % BITS_PER_INT));
 }
 
-// Check if the nth bit of the buffer map 1.
+// Check if the nth bit of the buffer map is 1.
 int is_bit_set(BufferMap buffer_map, int n) {
     return (buffer_map.bit_sequence[n / BITS_PER_INT] >> (n % BITS_PER_INT)) & 1;
 }
 
-regex_t *announce_regex() { //Add free
+regex_t *announce_regex() {
     static regex_t *regex = NULL;
     if (regex != NULL)
         return regex;
@@ -64,7 +64,6 @@ void free_announceData(announceData *data) {
     free(data->files);
     for (int i=0; i<data->nb_leech_keys; ++i)
         free(data->leechKeys[i]);
-
 }
 
 // Function to check announce message
@@ -74,13 +73,12 @@ announceData announceCheck(char *message) {
 
     regex_t *regex = announce_regex();
     //printf("%d.\n", regex);
-    // Execute regular expression
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
         fprintf(stderr, "Failed to match regular expression\n");
         return announceStruct;
     }
-    printf("Here.\n");
+
     //Port
     char port_str[PORT_MAX_LENGTH + 1];
     int len_port = matches[1].rm_eo - matches[1].rm_so;
@@ -118,7 +116,6 @@ announceData announceCheck(char *message) {
             BufferMap tmp = {(files[index/4].size-1)/files[index/4].pieceSize/BITS_PER_INT+1};
             files[index / 4].buffer_map = tmp;
         }
-        //printf("%s\n", token);
         token = strtok(NULL, DELIM);
         ++index;
     }
@@ -129,7 +126,6 @@ announceData announceCheck(char *message) {
     announceStruct.nb_leech_keys = nb_leech_keys;
     announceStruct.leechKeys = malloc(nb_leech_keys * 33*sizeof(char));
 
-    //regfree(regex);
     free(filesData);
 
     return announceStruct;

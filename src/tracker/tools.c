@@ -8,9 +8,9 @@ unsigned int countDelim(const char *str) { //  Seulement si DELIM ne fait qu'un 
     unsigned int count = 0;
     while (*str != '\0') {
         if (*str == *DELIM) {
-            count++;
+            ++count;
         }
-        str++;
+        ++str;
     }
     return count+(count>0);
 }
@@ -72,7 +72,6 @@ announceData announceCheck(char *message) {
     announceStruct.files = NULL;
 
     regex_t *regex = announce_regex();
-    //printf("%d.\n", regex);
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
         fprintf(stderr, "Failed to match regular expression\n");

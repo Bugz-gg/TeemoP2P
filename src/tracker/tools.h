@@ -1,5 +1,7 @@
 #ifndef TOOLS_H
 #define TOOLS_H
+#include <regex.h>
+
 #define BITS_PER_INT 8*sizeof(int)
 #define DELIM " "
 #define PORT_MAX_LENGTH 5
@@ -46,7 +48,7 @@ announceData announceCheck(char *);
 void printAnnounceData(announceData);
 void free_announceData(announceData *);
 
-void free_regex(regex_t);
+void free_regex(regex_t *);
 void free_file(File *);
 
 

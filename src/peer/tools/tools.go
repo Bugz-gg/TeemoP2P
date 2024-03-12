@@ -11,20 +11,6 @@ import (
 	//peer "peerproject/pair"
 )
 
-func btoi(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func notZero(i int) int {
-	if i != 0 {
-		return 1
-	}
-	return 0
-}
-
 type File struct {
 	name      string
 	size      int
@@ -54,10 +40,6 @@ func RegexInit() (*regexp.Regexp, *regexp.Regexp, *regexp.Regexp) {
 	getfilePattern := `^getfile\s+[a-z0-9]{32}$`
 	getfileRegex := regexp.MustCompile(getfilePattern)
 
-	//str := "announce listen 2222 seed [_]"
-	//str := "look [filename=\"file_a.dat\" filesize>\"1048576\"]"
-	//str := "getfile 8905e92afeb80fc7722ec89efbkdsf66"
-	//match := announceRegex.FindAllStringSubmatch()
 	return announceRegex, lookRegex, getfileRegex
 }
 

@@ -159,7 +159,7 @@ File * look(char* cond[5]){
     return f;
 }
 
-/* get_file cherche le fichier dans la clé est key*/
+/* get_file cherche le fichier dont la clé est key*/
 
 File * get_file(char * key){
     char* cond[5]={"","","",key,""};

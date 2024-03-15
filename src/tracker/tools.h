@@ -6,6 +6,10 @@
 #define DELIM " "
 #define PORT_MAX_LENGTH 5
 
+enum criterias {FILENAME, FILESIZE};
+enum operations {LT, LE, EQ, GE, GT, DI};
+enum types {INT, FLOAT, STR};
+
 typedef struct {
     int len;
     unsigned int *bit_sequence;
@@ -18,6 +22,7 @@ typedef struct {
     int pieceSize;
     char *key;
     BufferMap buffer_map;
+    int peer_id;
 } File;
 
 typedef struct {
@@ -28,6 +33,21 @@ typedef struct {
     char **leechKeys;
 } announceData;
 
+typedef struct {
+    enum types value_type;
+    enum criterias criteria;
+    enum operations op;
+    union {
+        int value_int;
+        float value_float;
+        char *value_str;
+    } value;
+} criterion;
+
+typedef struct {
+    unsigned int nb_criterions;
+    criterion *criterions;
+} lookData;
 
 struct file {
     char *name;
@@ -44,12 +64,19 @@ void clear_bit(BufferMap, int);
 int is_bit_set(BufferMap, int);
 
 regex_t *announce_regex();
+regex_t *look_regex();
+regex_t *comparison_regex();
 announceData announceCheck(char *);
+lookData lookCheck(char *);
 void printAnnounceData(announceData);
+void print_criterion(criterion);
+void printLookData(lookData);
 void free_announceData(announceData *);
 
 void free_regex(regex_t *);
 void free_file(File *);
+void free_announceData(announceData *);
+void free_lookData(lookData *);
 
 
 #endif //TOOLS_H

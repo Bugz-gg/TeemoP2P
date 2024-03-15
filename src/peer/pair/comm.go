@@ -24,7 +24,7 @@ func (p *peer) HelloTrack(t peer) {
 	message = string(message)
 	_, err = conn.Write([]byte(message))
 	errorCheck(err)
-	buffer := make([]byte, 256)
+	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	errorCheck(err)
 	fmt.Print("< ", string(buffer[:n]))
@@ -34,9 +34,11 @@ func (p *peer) ConnectTo(s peer) {
 	conn, err := net.Dial("tcp", s.IP+":"+s.Port)
 	errorCheck(err)
 	defer conn.Close()
+	fmt.Println(p.Name, " is connected to ", s.Name)
 	user := p.Name
 	reader := bufio.NewReader(os.Stdin)
 	for {
+		fmt.Print("Waiting for input... :")
 		message, _ := reader.ReadString('\n')
 		fmt.Println(user, ": < ", message)
 		if message == "exit\n" {

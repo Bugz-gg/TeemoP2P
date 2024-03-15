@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -20,11 +21,10 @@ func handleConnection(conn net.Conn) {
 	for {
 		buffer := make([]byte, 256)
 		n, err := conn.Read(buffer)
-		if err != nil {
+		if err != nil && err != io.EOF {
 			fmt.Println("Reading error:", err)
 			return
 		}
-
 		if n > 0 {
 			fmt.Print("<Message> ", string(buffer[:n]))
 			_, err := conn.Write(buffer[:n])

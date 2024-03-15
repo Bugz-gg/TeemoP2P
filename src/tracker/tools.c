@@ -12,7 +12,7 @@ unsigned int countDelim(const char *str) { //  Seulement si DELIM ne fait qu'un 
         }
         ++str;
     }
-    return count+(count>0);
+    return count + (count > 0);
 }
 
 int streq(char *str1, char *str2) {
@@ -48,6 +48,33 @@ regex_t *announce_regex() {
     return regex;
 }
 
+regex_t *look_regex() {
+    static regex_t *regex = NULL;
+    if (regex != NULL)
+        return regex;
+    regex = malloc(sizeof(regex_t));
+    char *pattern = "^look \\[(([a-z]+(<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\\]$";//"^look \\[((?:[a-z]+(?:<|<=|!=|=|>|>=)\\\"[a-zA-Z0-9]*\\\"| )*)\\]$";//"^look \\[((?:[a-z]+(?:<|<=|!=|=|>|>=)\\\".*\\\"| ))*\\]$"; //"^look \[((?:[a-z]+(?:<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\]$"
+    int ret = regcomp(regex, pattern, REG_EXTENDED); //^look \[((?:[a-z]+(?:<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\]$
+    if (ret) {
+        char error_message[100];
+        regerror(ret, regex, error_message, sizeof(error_message));
+        fprintf(stderr, "Failed to compile look regular expression. %s\n", error_message);
+    }
+    return regex;
+}
+
+regex_t *comparison_regex() {
+    static regex_t *regex = NULL;
+    if (regex != NULL)
+        return regex;
+    regex = malloc(sizeof(regex_t));
+    char *pattern = "^([a-z]+)((<|<=|!=|=|>|>=))\"([a-zA-Z0-9]*)\"$";
+    if (regcomp(regex, pattern, REG_EXTENDED)) {
+        fprintf(stderr, "Failed to compile regular expression\n");
+    }
+    return regex;
+}
+
 void free_regex(regex_t *regex) {
     regfree(regex);
     free(regex);
@@ -59,15 +86,23 @@ void free_file(File *file) {
 }
 
 void free_announceData(announceData *data) {
-    for (int i=0; i<data->nb_files; ++i)
+    for (int i = 0; i < data->nb_files; ++i)
         free_file(&data->files[i]);
     free(data->files);
-    for (int i=0; i<data->nb_leech_keys; ++i)
+    for (int i = 0; i < data->nb_leech_keys; ++i)
         free(data->leechKeys[i]);
 }
 
+void free_lookData(lookData *data) {
+    for (int i = 0; i < data->nb_criterions; ++i) {
+        if (data->criterions[i].value_type == STR)
+            free(data->criterions[i].value.value_str);
+    }
+    free(data->criterions);
+}
+
 // Function to check announce message
-announceData announceCheck(char *message) {
+announceData announceCheck(char *message) { // TODO : Valid announceStruct if error
     announceData announceStruct;
     announceStruct.files = NULL;
 
@@ -112,7 +147,7 @@ announceData announceCheck(char *message) {
                 return announceStruct;
             }
             files[index / 4].key = strndup(token, 32);
-            BufferMap tmp = {(files[index/4].size-1)/files[index/4].pieceSize/BITS_PER_INT+1};
+            BufferMap tmp = {(files[index / 4].size - 1) / files[index / 4].pieceSize / BITS_PER_INT + 1};
             files[index / 4].buffer_map = tmp;
         }
         token = strtok(NULL, DELIM);
@@ -123,11 +158,161 @@ announceData announceCheck(char *message) {
     announceStruct.nb_files = nbFiles;
     announceStruct.files = files;
     announceStruct.nb_leech_keys = nb_leech_keys;
-    announceStruct.leechKeys = malloc(nb_leech_keys * 33*sizeof(char));
+    announceStruct.leechKeys = malloc(nb_leech_keys * 33 * sizeof(char));
 
     free(filesData);
 
     return announceStruct;
+}
+
+// Function to check announce message
+lookData lookCheck(char *message) {
+    lookData lookStruct;
+    lookStruct.criterions = NULL;
+
+    regex_t *regex = look_regex();
+    regmatch_t matches[3];
+    if (regexec(regex, message, 3, matches, 0)) {
+        fprintf(stderr, "Failed to match regular expression.\n");
+        return lookStruct;
+    }
+
+    char *criterions_str = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
+    int count = countDelim(criterions_str);
+    printf("%s\n", criterions_str);
+    count = count + (!count && matches[1].rm_eo - matches[1].rm_so);
+    if (!count) {
+        fprintf(stderr, "No criteria found.\n");
+        return lookStruct;
+    }
+    regex_t *comp_regex = comparison_regex();
+    regmatch_t comparison_match[4];
+
+
+    criterion *criterions = malloc(count * sizeof(criterion));
+    char *token = strtok(criterions_str, DELIM);
+
+    char *endptr;
+    int int_val;
+    float float_val;
+    int index = 0;
+    int len_crit;
+
+    char criteria[25];
+
+    while (token != NULL) {
+        if (regexec(comp_regex, token, 4, comparison_match, 0)) {
+            fprintf(stderr, "Failed to match regular expression.\n");
+            return lookStruct;
+        }
+
+        len_crit = comparison_match[1].rm_eo - comparison_match[1].rm_so;
+        strncpy(criteria, token + comparison_match[1].rm_so, len_crit);
+        criteria[len_crit] = '\0';
+
+        if (streq(criteria, "filename")) { // Ajouter critères si besoin.
+            criterions[index].criteria = FILENAME;
+        } else if (streq(criteria, "filesize")) {
+            criterions[index].criteria = FILESIZE;
+        } else {
+            fprintf(stderr, "Incorrect criteria.\n");
+            return lookStruct;
+        }
+
+        len_crit = comparison_match[2].rm_eo - comparison_match[2].rm_so;
+        strncpy(criteria, token + comparison_match[2].rm_so, len_crit);
+        criteria[len_crit] = '\0';
+
+        if (streq(criteria, "<")) {
+            criterions[index].op = LT;
+        } else if (streq(criteria, "<=")) {
+            criterions[index].op = LE;
+        } else if (streq(criteria, "=")) {
+            criterions[index].op = EQ;
+        } else if (streq(criteria, ">=")) {
+            criterions[index].op = GE;
+        } else if (streq(criteria, "<")) {
+            criterions[index].op = GT;
+        } else if (streq(criteria, "!=")) {
+            criterions[index].op = DI;
+        } else {
+            fprintf(stderr, "Incorrect operator.\n");
+            return lookStruct;
+        }
+
+        int_val = strtol(token + comparison_match[3].rm_so, &endptr, 10);
+        if (*endptr == '\0') {
+            criterions[index].value_type = INT;
+            criterions[index].value.value_int = int_val;
+        } else {
+            float_val = strtof(token, &endptr);
+            if (*endptr == '\0') {
+                criterions[index].value_type = FLOAT;
+                criterions[index].value.value_float = float_val;
+            } else {
+                criterions[index].value_type = STR;
+                criterions[index].value.value_str = strndup(token, strlen(token));
+            }
+        }
+
+        token = strtok(NULL, DELIM);
+        ++index;
+    }
+
+    lookStruct.nb_criterions = count;
+    lookStruct.criterions = criterions;
+
+    free(criterions_str);
+
+    return lookStruct;
+}
+
+void print_criterion(criterion crit) {
+    switch (crit.criteria) {
+        case FILENAME:
+            printf("filename ");
+            break;
+        case FILESIZE:
+            printf("filesize ");
+            break;
+        default:
+            printf("UNRECOGNISED_CRITERIA ");
+    }
+    switch (crit.op) {
+        case LT:
+            printf("lower than ");
+            break;
+        case LE:
+            printf("lower than or equal to ");
+            break;
+        case EQ:
+            printf("equal to ");
+            break;
+        case GE:
+            printf("greater than or equal to");
+            break;
+        case GT:
+            printf("greater than ");
+            break;
+        case DI:
+            printf("different from ");
+            break;
+        default:
+            printf("UNRECOGNISED_OPERATOR ");
+    }
+    switch (crit.value_type) {
+        case INT:
+            printf("%d\n", crit.value.value_int);
+            break;
+        case FLOAT:
+            printf("%f\n", crit.value.value_float);
+            break;
+        case STR:
+            printf("%s\n", crit.value.value_str);
+            break;
+        default:
+            printf("UNRECOGNISED_VALUE\n");
+    }
 }
 
 void printAnnounceData(announceData data) {
@@ -142,16 +327,36 @@ void printAnnounceData(announceData data) {
     }
 }
 
+void printLookData(lookData data) {
+    printf("Nb criterions : %d\n", data.nb_criterions);
+    for (int i = 0; i < data.nb_criterions; ++i) {
+        print_criterion(data.criterions[i]);
+    }
+}
+
+
 int main() {
-    announceData data = announceCheck("announce listen 2222 seed [fe 12 1 duB18SB18SBYA8NS8AZNY8SN9kzox83h teemo 14 5 jzichfnt8SBYA8NS8AZNY8SN9kzox83h]");
-    announceData data2 = announceCheck("announce listen 2522 seed [ferIV 120 13 9kOz8SB18SBYA8NS8AZNY8SN9kzox83h interruption 94 3 8jzkhfnt8SBYA8NS8AZNY8SN9kzox83h]");
+    announceData data = announceCheck(
+            "announce listen 2222 seed [teemo 14 5 jzichfnt8SBYA8NS8AZNY8SN9kzox83h]");
+    announceData data2 = announceCheck(
+            "announce listen 2522 seed [ferIV 120 13 9kOz8SB18SBYA8NS8AZNY8SN9kzox83h interruption 94 3 8jzkhfnt8SBYA8NS8AZNY8SN9kzox83h]");
+
+    lookData data3 = lookCheck("look [filename=\"Enfin\"]");
+    lookData data4 = lookCheck("look [filesize=\"9128\" filename=\"Alttab\"]");
+
 
     printAnnounceData(data);
     printAnnounceData(data2);
+    printLookData(data3);
+    printLookData(data4);
 
     free_regex(announce_regex());
+    free_regex(look_regex());
+    free_regex(comparison_regex());
     free_announceData(&data);
     free_announceData(&data2);
+    free_lookData(&data3);
+    free_lookData(&data4);
 
     return 0;
 }

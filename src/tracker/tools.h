@@ -6,6 +6,10 @@
 #define DELIM " "
 #define PORT_MAX_LENGTH 5
 
+enum criterias {FILENAME, FILESIZE};
+enum operations {LT, LE, EQ, GE, GT, DI};
+enum types {INT, FLOAT, STR};
+
 typedef struct {
     int len;
     unsigned int *bit_sequence;
@@ -28,6 +32,21 @@ typedef struct {
     char **leechKeys;
 } announceData;
 
+typedef struct {
+    enum types value_type;
+    enum criterias criteria;
+    enum operations op;
+    union {
+        int value_int;
+        float value_float;
+        char *value_str;
+    } value;
+} criterion;
+
+typedef struct {
+    unsigned int nb_criterions;
+    criterion *criterions;
+} lookData;
 
 struct file {
     char *name;

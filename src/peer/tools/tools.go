@@ -1,5 +1,6 @@
-// package tools
-package main
+package tools
+
+// package main
 
 import (
 	"errors"
@@ -28,6 +29,13 @@ type announceData struct {
 	port      int
 	files     []File
 	leechKeys []string
+}
+
+func (f *File) GetFile() (string, int, int, string, bool) {
+	if f.name == "" && f.size == 0 {
+		return f.name, f.size, f.pieceSize, f.key, false
+	}
+	return f.name, f.size, f.pieceSize, f.key, true
 }
 
 func RegexInit() (*regexp.Regexp, *regexp.Regexp, *regexp.Regexp) {
@@ -78,10 +86,10 @@ func announceCheck(regex *regexp.Regexp, message string) (bool, announceData) {
 	return false, announceData{}
 }
 
-func main() {
-	announceRegex, _, _ := RegexInit()
-
-	announceCheck(announceRegex, "announce listen 2222 seed [fe 12 1 du]")
-}
+// func main() {
+// announceRegex, _, _ := RegexInit()
+//
+// announceCheck(announceRegex, "announce listen 2222 seed [fe 12 1 du]")
+// }
 
 // Fonction de mise à jour des peers

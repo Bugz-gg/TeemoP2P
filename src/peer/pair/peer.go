@@ -1,31 +1,35 @@
-package peer
+package peer_package
 
 import (
 	"bufio"
 	"fmt"
-	"net"
 	"os"
 	"strings"
+	"time"
+
+	tools "peerproject/tools"
 )
 
-type Peer struct {
+type peer struct {
+	Name   string
 	IP     string
 	Port   string
 	Status string
-	files []File
+	Type   string
+	Files  []tools.File
 }
 
 func errorCheck(err error) {
 	if err != nil {
 		fmt.Println("Error:", err)
-		os.Exit(1)
+		panic(err)
 	}
 }
 
-func GetConfig() Peer {
+func GetConfig() peer {
 	file, err := os.Open("./config.ini")
 	errorCheck(err)
-	var peer Peer
+	var track peer
 
 	defer file.Close()
 
@@ -40,56 +44,28 @@ func GetConfig() Peer {
 
 			switch key {
 			case "tracker-address":
-				peer.IP = value
+				track.IP = value
 			case "tracker-port":
-				peer.Port = value
+				track.Port = value
 			}
 		}
 	}
-	peer.Status = "tracker"
+	track.Status = "online"
+	track.Type = "tracker"
+	return track
+}
+
+func StartPeer(Name string, IP string, Port string, Type string, Files []tools.File) peer {
+	track := GetConfig()
+	peer := peer{
+		Name:  Name,
+		IP:    IP,
+		Port:  Port,
+		Type:  Type,
+		Files: Files,
+	}
+	go peer.startListening()
+	time.Sleep(time.Second)
+	go peer.HelloTrack(track)
 	return peer
 }
-
-func (p *Peer) StartListening() {
-
-	// peers := make(map[string]Peer)
-	server, err := net.Listen("tcp", p.IP+":"+p.Port)
-	errorCheck(err)
-
-	defer server.Close()
-	fmt.Println("Listening on " + p.IP + ":" + p.Port)
-	fmt.Println("Waiting for client...")
-
-	conn, err := server.Accept()
-	errorCheck(err)
-	defer conn.Close()
-	if p.Status == "tracker" {
-		//tools de kevin
-	}
-	for {
-		buffer := make([]byte, 256)
-		n, err := conn.Read(buffer)
-		errorCheck(err)
-
-		if n > 0 {
-			fmt.Print("<Message> ", string(buffer[:n]))
-			_, err := conn.Write(buffer[:n])
-			errorCheck(err)
-		}
-	}
-}
-
-func (p *Peer) StartPeer() {
-	go p.StartListening()
-	message := "< annonce listen " + p.Port + "[]"
-	tracker := GetConfig()
-	serv_tcp_addr, err := net.ResolveTCPAddr("tcp", tracker.IP+":"+tracker.Port)
-	errorCheck(err)
-
-	sockfd, err := net.DialTCP("tcp", nil, serv_tcp_addr)
-	errorCheck(err)
-	sockfd.Write([]byte(message))
-
-}
-
-// Reprise du téléchargement en cas d'erreur avec un fichier d'opérations.

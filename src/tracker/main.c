@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
+#include "tools.h"
 
 #define MAX_LENGTH 100
 
@@ -18,8 +19,14 @@ typedef struct {
     int length;
     int piece_size;
     char *key;
-    int peer_id;
+    int *peer_id;
 } File;
+
+typedef struct {
+    int peer_id;
+    char *ip;
+    int port;
+} Peer;
 
 /*
 add_peer prend la liste des fichiers de la pair et les enregistre dans le fichier de configuration config.ini 

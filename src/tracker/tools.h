@@ -22,6 +22,7 @@ typedef struct {
     int pieceSize;
     char *key;
     BufferMap buffer_map;
+    int peer_id;
 } File;
 
 typedef struct {
@@ -63,12 +64,19 @@ void clear_bit(BufferMap, int);
 int is_bit_set(BufferMap, int);
 
 regex_t *announce_regex();
+regex_t *look_regex();
+regex_t *comparison_regex();
 announceData announceCheck(char *);
+lookData lookCheck(char *);
 void printAnnounceData(announceData);
+void print_criterion(criterion);
+void printLookData(lookData);
 void free_announceData(announceData *);
 
 void free_regex(regex_t *);
 void free_file(File *);
+void free_announceData(announceData *);
+void free_lookData(lookData *);
 
 
 #endif //TOOLS_H

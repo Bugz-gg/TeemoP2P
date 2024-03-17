@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	//"math"
 	//"os"
 	//peer "peerproject/pair"
 )
@@ -125,6 +124,13 @@ func DataRegexGen() (DataRegex func() *regexp.Regexp) {
 }
 
 var DataRegex = DataRegexGen()
+
+func (f *File) GetFile() (string, int, int, string, bool) {
+	if f.name == "" && f.size == 0 {
+		return f.name, f.size, f.pieceSize, f.key, false
+	}
+	return f.name, f.size, f.pieceSize, f.key, true
+}
 
 func RegexInit() (*regexp.Regexp, *regexp.Regexp, *regexp.Regexp) {
 	announcePattern := `^announce\s+listen\s+(\d+)\s+seed\s+\[(.*)\]$` // Add optional leech if necessary

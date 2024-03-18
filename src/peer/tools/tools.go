@@ -1,5 +1,4 @@
-// package tools
-package main
+package tools
 
 import (
 	"errors"
@@ -35,7 +34,7 @@ type InterestedData struct {
 }
 
 type HaveData struct {
-	Key string
+	Key       string
 	BufferMap BufferMap
 }
 
@@ -53,7 +52,7 @@ func BufferSize(file File) int {
 
 func ByteArrayWrite(array []byte, index int, value int) {
 	if value == 1 {
-		array[index/8] |= 1 << (7-(index % 8))
+		array[index/8] |= 1 << (7 - (index % 8))
 	}
 }
 
@@ -68,7 +67,7 @@ func StringToBufferMap(str string) BufferMap {
 			ByteArrayWrite(array, index, 1)
 		}
 	}
-	return BufferMap{Length:len(str), BitSequence: array}
+	return BufferMap{Length: len(str), BitSequence: array}
 }
 
 func BufferMapToString(bufferMap BufferMap) {
@@ -126,10 +125,10 @@ func DataRegexGen() (DataRegex func() *regexp.Regexp) {
 var DataRegex = DataRegexGen()
 
 func (f *File) GetFile() (string, int, int, string, bool) {
-	if f.name == "" && f.size == 0 {
-		return f.name, f.size, f.pieceSize, f.key, false
+	if f.Name == "" && f.Size == 0 {
+		return f.Name, f.Size, f.PieceSize, f.Key, false
 	}
-	return f.name, f.size, f.pieceSize, f.key, true
+	return f.Name, f.Size, f.PieceSize, f.Key, true
 }
 
 func RegexInit() (*regexp.Regexp, *regexp.Regexp, *regexp.Regexp) {
@@ -189,26 +188,13 @@ func HaveCheck(message string) (bool, HaveData) {
 		if len(buffer) == 0 {
 			buffer = "0"
 		}
-		file := File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"};
+		file := File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}
 		if len(buffer) != BufferBitSize(file) {
 			return false, HaveData{}
 		}
 		return true, HaveData{Key: match[1], BufferMap: StringToBufferMap(buffer)}
 	}
 	return false, HaveData{}
-}
-
-func main() {
-	//announceRegex, _, _ := RegexInit()
-	//GetAnnounceRegex := AnnounceRegex()
-	//announceRegex := GetAnnounceRegex()
-
-	AnnounceCheck("announce listen 2222 seed [fe 12 1 du]")
-	fmt.Println(InterestedCheck("interested Uizhsja8hzUizhsja8hzUizhsja8hzsu"))
-	fmt.Println(InterestedCheck("interested izsja8hzUizhsja8hzUizhsja8hzsu"))
-
-	fmt.Println(HaveCheck("have Uizhsja8hzUizhsja8hzUizhsja8hzsu 010010101001"))
-
 }
 
 // Fonction de mise à jour des peers

@@ -1,8 +1,15 @@
 package tools
 
 import (
+	"errors"
+	"fmt"
 	"regexp"
+	"strconv"
+	"strings"
 )
+
+var LocalFiles = map[string]File{} // Supposing no collision will happen during the project
+var RemoteFiles = map[string]File{}
 
 type File struct {
 	Name      string
@@ -12,10 +19,8 @@ type File struct {
 	BufferMap BufferMap
 }
 
-type AnnounceData struct {
-	Port      int
-	Files     []File
-	LeechKeys []string
+type ListData struct {
+	Files []File
 }
 
 type InterestedData struct {
@@ -27,9 +32,15 @@ type HaveData struct {
 	BufferMap BufferMap
 }
 
-func SearchFile(key string) {
-
+func ListRegexGen() (ListRegex func() *regexp.Regexp) {
+	listPattern := `^list \[(.*)\]$`
+	listRegex := regexp.MustCompile(listPattern)
+	return func() *regexp.Regexp {
+		return listRegex
+	}
 }
+
+var ListRegex = ListRegexGen()
 
 func InterestedRegexGen() (InterestedRegex func() *regexp.Regexp) {
 	interestedPattern := `^interested (?<key>[a-zA-Z0-9]{32})$` // Add optional leech if necessary
@@ -71,6 +82,37 @@ func DataRegexGen() (DataRegex func() *regexp.Regexp) {
 
 var DataRegex = DataRegexGen()
 
+func ListCheck(message string) (bool, ListData) {
+	if match := ListRegex().FindStringSubmatch(message); match != nil {
+		filesData := strings.Split(match[1], " ")
+		if len(filesData)%4 != 0 {
+			fmt.Println("Invalid received message.")
+			return false, ListData{}
+		}
+		listStruct := ListData{}
+		nbFiles := len(filesData) / 4
+		for i := 0; i < nbFiles; i++ {
+			filename := filesData[i*4]
+			size, err := strconv.Atoi(filesData[i*4+1])
+			pieceSize, err2 := strconv.Atoi(filesData[i*4+2])
+
+			if err != nil || err2 != nil {
+				fmt.Println("Invalid conversion to int (size or piece size).", err, err2)
+				return false, ListData{}
+			}
+			key := filesData[i*4+3]
+			if len(key) != 32 {
+				errors.New("Key error.")
+			}
+			file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key, BufferMap: BufferMap{Length: (size-1)/pieceSize/8 + 1, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
+			listStruct.Files = append(listStruct.Files, file)
+			RemoteFiles[key] = file // Update the registered remote files.
+		}
+		return true, listStruct
+	}
+	return false, ListData{}
+}
+
 func InterestedCheck(message string) (bool, InterestedData) {
 	if match := InterestedRegex().FindStringSubmatch(message); match != nil {
 		return true, InterestedData{Key: match[1]}
@@ -84,7 +126,8 @@ func HaveCheck(message string) (bool, HaveData) {
 		if len(buffer) == 0 {
 			buffer = "0"
 		}
-		file := File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}
+		file := RemoteFiles[match[1]]
+		file = File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
 		if len(buffer) != BufferBitSize(file) {
 			return false, HaveData{}
 		}

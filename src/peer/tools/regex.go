@@ -10,8 +10,8 @@ import (
 var LocalFiles = map[string]File{} // Supposing no collision will happen during the project
 var RemoteFiles = map[string]File{}
 
-func AddFile(fileMap map[string]File, file File) {
-	fileMap[file.Key] = file
+func AddFile(fileMap map[string]File, file *File) {
+	fileMap[file.Key] = *file
 }
 
 func RemoveFile(fileMap map[string]File, file File) {
@@ -24,32 +24,6 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 		result[i] = fn(t)
 	}
 	return result
-}
-
-type File struct {
-	Name      string
-	Size      int
-	PieceSize int
-	Key       string
-	BufferMap BufferMap
-}
-
-type ListData struct {
-	Files []File
-}
-
-type InterestedData struct {
-	Key string
-}
-
-type HaveData struct {
-	Key       string
-	BufferMap BufferMap
-}
-
-type GetPiecesData struct {
-	Key    string
-	Pieces []int
 }
 
 func ListRegexGen() (ListRegex func() *regexp.Regexp) {

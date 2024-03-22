@@ -82,7 +82,6 @@ func TestGetPieces(t *testing.T) {
 	}
 
 	success3, getPiecesData3 := tools.GetPiecesCheck("getpieces Uizhsja8hzpolisja8hzUizhsja8hzsu [0 5]")
-	//b := []int{0, 5}
 	expectedGetPiecesData3 := tools.GetPiecesData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []int{0, 5}}
 	if !success3 || !tools.GetPiecesCmp(getPiecesData3, expectedGetPiecesData3) {
 		t.Errorf("HaveCheck failed. Expected: true %v, Got: %v %v", expectedGetPiecesData3, success3, getPiecesData3)

@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-var LocalFiles = map[string]File{} // Supposing no collision will happen during the project
-var RemoteFiles = map[string]File{}
+var LocalFiles = map[string]*File{}  // Supposing no collision will happen during the project
+var RemoteFiles = map[string]*File{} // Switch to map[string]*File{} ?
 
-func AddFile(fileMap map[string]File, file *File) {
-	fileMap[file.Key] = *file
+func AddFile(fileMap map[string]*File, file *File) {
+	fileMap[file.Key] = file
 }
 
-func RemoveFile(fileMap map[string]File, file File) {
+func RemoveFile(fileMap map[string]*File, file File) {
 	delete(fileMap, file.Key)
 }
 
@@ -101,7 +101,7 @@ func ListCheck(message string) (bool, ListData) {
 			}
 			file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key, BufferMap: BufferMap{Length: (size-1)/pieceSize/8 + 1, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
 			listStruct.Files = append(listStruct.Files, file)
-			RemoteFiles[key] = file // Update the registered remote files.
+			RemoteFiles[key] = &file // Update the registered remote files.
 		}
 		return true, listStruct
 	}
@@ -126,8 +126,8 @@ func HaveCheck(message string) (bool, HaveData) {
 			buffer = "0"
 		}
 		file := RemoteFiles[match[1]]
-		file = File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
-		if len(buffer) != BufferBitSize(file) {
+		file = &File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
+		if len(buffer) != BufferBitSize(*file) {
 			return false, HaveData{}
 		}
 		return true, HaveData{Key: match[1], BufferMap: StringToBufferMap(buffer)}
@@ -149,7 +149,7 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 		pieces := Map(strings.Split(match[2], " "), func(item string) int { i, _ := strconv.Atoi(item); return i })
 		file := LocalFiles[match[1]]
 		for _, i := range pieces {
-			if i >= BufferBitSize(file) || !ByteArrayCheck(file.BufferMap.BitSequence, i) {
+			if i >= BufferBitSize(*file) || !ByteArrayCheck(file.BufferMap.BitSequence, i) {
 				fmt.Println("Invalid pieces' numbers :", i)
 				return false, GetPiecesData{}
 			}

@@ -43,13 +43,13 @@ func TestInterested(t *testing.T) {
 func TestHave(t *testing.T) {
 	fmt.Println(">>> Have regex")
 
+	tools.AddFile(tools.LocalFiles, &dummyFile2)
 	tools.InitBufferMap(&dummyFile2)
 	tools.BufferMapWrite(&dummyFile2.BufferMap, 1)
 	tools.BufferMapWrite(&dummyFile2.BufferMap, 4)
 	tools.BufferMapWrite(&dummyFile2.BufferMap, 6)
 	tools.BufferMapWrite(&dummyFile2.BufferMap, 8)
 	tools.BufferMapWrite(&dummyFile2.BufferMap, 11)
-	tools.AddFile(tools.LocalFiles, &dummyFile2)
 
 	success, haveData := tools.HaveCheck("have Uizhsja8hzUizhsja8hzU7zhsja8hzsu 010010101001")
 	expectedHaveData := tools.HaveData{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", BufferMap: tools.LocalFiles["Uizhsja8hzUizhsja8hzU7zhsja8hzsu"].BufferMap}
@@ -61,14 +61,14 @@ func TestHave(t *testing.T) {
 func TestGetPieces(t *testing.T) {
 	fmt.Println(">>> GetPieces regex")
 
+	tools.AddFile(tools.LocalFiles, &dummyFile)
 	tools.InitBufferMap(&dummyFile)
 	tools.BufferMapWrite(&dummyFile.BufferMap, 0)
-	tools.AddFile(tools.LocalFiles, &dummyFile)
 
+	tools.AddFile(tools.LocalFiles, &dummyFile3)
 	tools.InitBufferMap(&dummyFile3)
 	tools.BufferMapWrite(&dummyFile3.BufferMap, 0)
 	tools.BufferMapWrite(&dummyFile3.BufferMap, 5)
-	tools.AddFile(tools.LocalFiles, &dummyFile3)
 
 	success, getPiecesData := tools.GetPiecesCheck("getpieces UizhsjakhzUizhsja8hzUizhsja8hzsu []")
 	expectedGetPiecesData := tools.GetPiecesData{}

@@ -159,6 +159,43 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 	return false, GetPiecesData{}
 }
 
+func DataCheck(message string) (bool, DataData) {
+	if match := DataRegex().FindStringSubmatch(message); match != nil {
+		buffer := match[2]
+		if len(buffer) == 0 {
+			fmt.Println("No piece given.")
+			return false, DataData{}
+		}
+		if _, valid := LocalFiles[match[1]]; !valid { // If we don't have any piece of the requested file yet.
+			rFile := RemoteFiles[match[1]]
+			LocalFiles[match[1]] = &File{Name: rFile.Name, Size: rFile.Size, PieceSize: rFile.PieceSize, Key: match[1]}
+			InitBufferMap(LocalFiles[match[1]])
+		}
+		piecesdata := strings.Split(match[2], " ")
+
+		file := LocalFiles[match[1]]
+		for _, data := range piecesdata {
+			piece := strings.Split(data, ":")
+			index, _ := strconv.Atoi(piece[0])
+			if ByteArrayCheck(file.BufferMap.BitSequence, index) {
+				fmt.Println("Already have the piece.")
+				return false, DataData{}
+			}
+			if index < 0 || index >= file.BufferMap.Length {
+				fmt.Println("Out or range index received.")
+				return false, DataData{}
+			}
+			WriteFile(file, index, piece[1])
+
+			// Check if received is exactly what was asked ? No. Can be less.
+			// Check integrity of file if all pieces have been downloaded ?
+
+		}
+		return true, DataData{Key: match[1]}
+	}
+	return false, DataData{}
+}
+
 func (f *File) GetFile() (string, int, int, string, bool) {
 	if f.Name == "" && f.Size == 0 {
 		return f.Name, f.Size, f.PieceSize, f.Key, false

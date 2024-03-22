@@ -57,3 +57,8 @@ func PrintBuffer(array []byte) {
 	}
 	fmt.Println(buf.String())
 }
+
+// WriteFile This function writes the received data for a file.
+func WriteFile(file *File, index int, str string) {
+
+}

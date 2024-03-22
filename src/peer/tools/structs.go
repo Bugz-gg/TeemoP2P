@@ -12,6 +12,16 @@ type File struct {
 	BufferMap BufferMap
 }
 
+type Piece struct {
+	Index int
+	Data  Data
+}
+
+type Data struct {
+	Length      int
+	BitSequence []byte
+}
+
 type ListData struct {
 	Files []File
 }
@@ -28,6 +38,11 @@ type HaveData struct {
 type GetPiecesData struct {
 	Key    string
 	Pieces []int
+}
+
+type DataData struct {
+	Key    string
+	Pieces []Piece
 }
 
 type BufferMap struct {

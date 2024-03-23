@@ -3,6 +3,7 @@ package peer_package
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -10,15 +11,22 @@ import (
 	tools "peerproject/tools"
 )
 
-type peer struct {
-	Name   string
+type Peer struct {
 	IP     string
 	Port   string
 	Status string
 	Type   string
 	Files  []tools.File
+	Comm   map[string]net.Conn
 }
 
+func (p *Peer) IsEmpty() bool {
+	if len(p.IP) == 0 || len(p.Port) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
 func errorCheck(err error) {
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -26,10 +34,10 @@ func errorCheck(err error) {
 	}
 }
 
-func GetConfig() peer {
+func GetConfig() Peer {
 	file, err := os.Open("./config.ini")
 	errorCheck(err)
-	var track peer
+	var track Peer
 
 	defer file.Close()
 
@@ -55,17 +63,17 @@ func GetConfig() peer {
 	return track
 }
 
-func StartPeer(Name string, IP string, Port string, Type string, Files []tools.File) peer {
+func StartPeer(IP string, Port string, Type string, Files []tools.File) Peer {
 	track := GetConfig()
-	peer := peer{
-		Name:  Name,
+	peer := Peer{
 		IP:    IP,
 		Port:  Port,
 		Type:  Type,
 		Files: Files,
+		Comm:  make(map[string]net.Conn),
 	}
 	go peer.startListening()
 	time.Sleep(time.Second)
-	go peer.HelloTrack(track)
+	peer.HelloTrack(track)
 	return peer
 }

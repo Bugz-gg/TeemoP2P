@@ -17,6 +17,7 @@ type Piece struct {
 	Data  Data
 }
 
+// Data : A piece's data
 type Data struct {
 	Length      int
 	BitSequence []byte
@@ -88,6 +89,34 @@ func HaveCmp(hD1 HaveData, hD2 HaveData) bool {
 	return hD1.Key == hD2.Key && BufferMapCmp(hD1.BufferMap, hD2.BufferMap)
 }
 
+func DataStructCmp(d1 Data, d2 Data) bool {
+	if d1.Length != d2.Length {
+		return false
+	}
+	for i, v := range d1.BitSequence {
+		if v != d2.BitSequence[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func PieceCmp(p1 Piece, p2 Piece) bool {
+	return p1.Index == p2.Index && DataStructCmp(p1.Data, p2.Data)
+}
+
+func DataCmp(dD1 DataData, dD2 DataData) bool {
+	if dD1.Key != dD2.Key || len(dD1.Pieces) != len(dD2.Pieces) {
+		return false
+	}
+	for i, piece := range dD1.Pieces {
+		if !PieceCmp(piece, dD2.Pieces[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 func GetPiecesCmp(gPD1 GetPiecesData, gPD2 GetPiecesData) bool {
 	if gPD1.Key != gPD2.Key {
 		return false
@@ -107,7 +136,7 @@ func BufferMapCmp(bM1 BufferMap, bM2 BufferMap) bool {
 	if bM1.Length == 0 {
 		return true
 	}
-	for i := 0; i < bM1.Length; i++ {
+	for i := 0; i < bM1.Length/8; i++ {
 		if bM1.BitSequence[i] != bM2.BitSequence[i] {
 			return false
 		}

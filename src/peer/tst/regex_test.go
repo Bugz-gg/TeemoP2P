@@ -73,22 +73,56 @@ func TestGetPieces(t *testing.T) {
 	success, getPiecesData := tools.GetPiecesCheck("getpieces UizhsjakhzUizhsja8hzUizhsja8hzsu []")
 	expectedGetPiecesData := tools.GetPiecesData{}
 	if success || !tools.GetPiecesCmp(getPiecesData, expectedGetPiecesData) {
-		t.Errorf("HaveCheck failed. Expected: false %v, Got: %v %v", expectedGetPiecesData, success, getPiecesData)
+		t.Errorf("GetPiecesCheck failed. Expected: false %v, Got: %v %v", expectedGetPiecesData, success, getPiecesData)
 	}
 
 	success2, getPiecesData2 := tools.GetPiecesCheck("getpieces Uizhsja8hzUizhsja8hzUizhsja8hzsu [0 893 88]")
 	if success2 || !tools.GetPiecesCmp(getPiecesData2, expectedGetPiecesData) {
-		t.Errorf("HaveCheck failed. Expected: false %v, Got: %v %v", expectedGetPiecesData, success2, getPiecesData2)
+		t.Errorf("GetPiecesCheck failed. Expected: false %v, Got: %v %v", expectedGetPiecesData, success2, getPiecesData2)
 	}
 
 	success3, getPiecesData3 := tools.GetPiecesCheck("getpieces Uizhsja8hzpolisja8hzUizhsja8hzsu [0 5]")
 	expectedGetPiecesData3 := tools.GetPiecesData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []int{0, 5}}
 	if !success3 || !tools.GetPiecesCmp(getPiecesData3, expectedGetPiecesData3) {
-		t.Errorf("HaveCheck failed. Expected: true %v, Got: %v %v", expectedGetPiecesData3, success3, getPiecesData3)
+		t.Errorf("GetPiecesCheck failed. Expected: true %v, Got: %v %v", expectedGetPiecesData3, success3, getPiecesData3)
 	}
 }
 
 func TestData(t *testing.T) {
 	fmt.Println(">>> Data regex")
 
+	tools.AddFile(tools.LocalFiles, &dummyFile)
+	tools.InitBufferMap(&dummyFile)
+	tools.BufferMapWrite(&dummyFile.BufferMap, 0)
+
+	tools.AddFile(tools.RemoteFiles, &dummyFile3)
+	tools.InitBufferMap(&dummyFile3)
+	//tools.BufferMapWrite(&dummyFile3.BufferMap, 0)
+	//tools.BufferMapWrite(&dummyFile3.BufferMap, 5)
+
+	// No piece given
+	success, dataData := tools.DataCheck("data UizhsjakhzUizhsja8hzUizhsja8hzsu []")
+	expectedDataData := tools.DataData{}
+	if success || !tools.DataCmp(dataData, expectedDataData) {
+		t.Errorf("DataCheck failed. Expected: false %v, Got: %v %v", expectedDataData, success, dataData)
+	}
+
+	// Wrong piece size
+	success2, dataData2 := tools.DataCheck("data Uizhsja8hzUizhsja8hzUizhsja8hzsu [0:0 893:0 88:1]")
+	if success2 || !tools.DataCmp(dataData2, expectedDataData) {
+		t.Errorf("DataCheck failed. Expected: false %v, Got: %v %v", expectedDataData, success2, dataData2)
+	}
+
+	// Out of range piece index
+	success3, dataData3 := tools.DataCheck("data Uizhsja8hzUizhsja8hzUizhsja8hzsu [0:01 893:10 88:10]")
+	if success2 || !tools.DataCmp(dataData3, expectedDataData) {
+		t.Errorf("DataCheck failed. Expected: false %v, Got: %v %v", expectedDataData, success3, dataData3)
+	}
+
+	// Correct
+	success4, dataData4 := tools.DataCheck("data Uizhsja8hzpolisja8hzUizhsja8hzsu [0:101 5:010]")
+	expectedDataData4 := tools.DataData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []tools.Piece{{Data: tools.Data{Length: 3, BitSequence: []byte{160}}}, {Index: 5, Data: tools.Data{Length: 3, BitSequence: []byte{64}}}}}
+	if !success4 || !tools.DataCmp(dataData4, expectedDataData4) {
+		t.Errorf("DataCheck failed. Expected: true %v, Got: %v %v", expectedDataData4, success4, dataData4)
+	}
 }

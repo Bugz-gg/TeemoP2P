@@ -67,7 +67,7 @@ func GetPiecesRegexGen() (GetPiecesRegex func() *regexp.Regexp) {
 var GetPiecesRegex = GetPiecesRegexGen()
 
 func DataRegexGen() (DataRegex func() *regexp.Regexp) { // To be tested
-	dataPattern := `^getpieces [a-zA-Z0-9]{32} \[(?:[0-9]*:[01]*| )\]$` // Add optional leech if necessary
+	dataPattern := `^data ([a-zA-Z0-9]{32}) \[((?:[0-9]*:[01]*| )*)\]$` // Add optional leech if necessary
 	dataRegex := regexp.MustCompile(dataPattern)
 	return func() *regexp.Regexp {
 		return dataRegex
@@ -109,7 +109,7 @@ func ListCheck(message string) (bool, ListData) {
 				fmt.Println("Invalid key.", err, err2)
 				return false, ListData{}
 			}
-			file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key, BufferMap: BufferMap{Length: (size-1)/pieceSize/8 + 1, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
+			file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key, BufferMap: BufferMap{Length: size / pieceSize, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
 			listStruct.Files = append(listStruct.Files, file)
 			RemoteFiles[key] = &file // Update the registered remote files.
 		}
@@ -184,24 +184,33 @@ func DataCheck(message string) (bool, DataData) {
 		piecesdata := strings.Split(match[2], " ")
 
 		file := LocalFiles[match[1]]
-		for _, data := range piecesdata {
+		piecesize := file.PieceSize
+		pieces := make([]Piece, len(piecesdata))
+		for i, data := range piecesdata {
 			piece := strings.Split(data, ":")
 			index, _ := strconv.Atoi(piece[0])
-			if ByteArrayCheck(file.BufferMap.BitSequence, index) {
-				fmt.Println("Already have the piece.")
-				return false, DataData{}
-			}
 			if index < 0 || index >= file.BufferMap.Length {
 				fmt.Println("Out or range index received.")
 				return false, DataData{}
 			}
+			if ByteArrayCheck(file.BufferMap.BitSequence, index) {
+				fmt.Printf("Already have the piece at index %d.\n", index)
+				//return false, DataData{}
+				continue
+			}
+			if len(piece[1]) != piecesize {
+				fmt.Println("Wrong piece size received.")
+				return false, DataData{}
+			}
 			WriteFile(file, index, piece[1])
+			pieces[i].Index = index
+			pieces[i].Data = StringToData(piece[1])
 
 			// Check if received is exactly what was asked ? No. Can be less.
 			// Check integrity of file if all pieces have been downloaded ?
 
 		}
-		return true, DataData{Key: match[1]}
+		return true, DataData{Key: match[1], Pieces: pieces}
 	}
 	return false, DataData{}
 }

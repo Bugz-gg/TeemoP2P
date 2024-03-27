@@ -7,7 +7,7 @@ import (
 )
 
 func BufferBitSize(file File) int {
-	return (file.Size-1)/file.PieceSize + 1
+	return file.Size / file.PieceSize
 }
 
 func BufferSize(file File) int {
@@ -15,7 +15,7 @@ func BufferSize(file File) int {
 }
 
 func InitBufferMap(file *File) {
-	file.BufferMap = BufferMap{Length: BufferSize(*file), BitSequence: make([]byte, BufferSize(*file))}
+	file.BufferMap = BufferMap{Length: BufferBitSize(*file), BitSequence: make([]byte, BufferSize(*file))}
 }
 
 func ByteArrayWrite(array *[]byte, index int) {
@@ -41,7 +41,17 @@ func StringToBufferMap(str string) BufferMap {
 			ByteArrayWrite(&array, index)
 		}
 	}
-	return BufferMap{Length: (len(str)-1)/8 + 1, BitSequence: array}
+	return BufferMap{Length: len(str), BitSequence: array}
+}
+
+func StringToData(str string) Data {
+	array := make([]byte, (len(str)-1)/8+1)
+	for index, char := range str {
+		if char == '1' {
+			ByteArrayWrite(&array, index)
+		}
+	}
+	return Data{Length: len(str), BitSequence: array}
 }
 
 func BufferMapToString(bufferMap BufferMap) {

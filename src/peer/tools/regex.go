@@ -66,7 +66,7 @@ func GetPiecesRegexGen() (GetPiecesRegex func() *regexp.Regexp) {
 
 var GetPiecesRegex = GetPiecesRegexGen()
 
-func DataRegexGen() (DataRegex func() *regexp.Regexp) {
+func DataRegexGen() (DataRegex func() *regexp.Regexp) { // To be tested
 	dataPattern := `^getpieces [a-zA-Z0-9]{32} \[(?:[0-9]*:[01]*| )\]$` // Add optional leech if necessary
 	dataRegex := regexp.MustCompile(dataPattern)
 	return func() *regexp.Regexp {
@@ -75,6 +75,16 @@ func DataRegexGen() (DataRegex func() *regexp.Regexp) {
 }
 
 var DataRegex = DataRegexGen()
+
+func PeersRegexGen() (PeersRegex func() *regexp.Regexp) { // IPv4
+	peersPattern := `^peers [a-zA-Z0-9]{32} \[(?:[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+| )\]$`
+	peersRegex := regexp.MustCompile(peersPattern)
+	return func() *regexp.Regexp {
+		return peersRegex
+	}
+}
+
+var PeersRegex = PeersRegexGen()
 
 func ListCheck(message string) (bool, ListData) {
 	if match := ListRegex().FindStringSubmatch(message); match != nil {
@@ -194,6 +204,28 @@ func DataCheck(message string) (bool, DataData) {
 		return true, DataData{Key: match[1]}
 	}
 	return false, DataData{}
+}
+
+func PeersCheck(message string) (bool, PeersData) {
+	if match := PeersRegex().FindStringSubmatch(message); match != nil {
+		buffer := match[2]
+		if len(buffer) == 0 {
+			fmt.Println("No peer given.")
+			return false, PeersData{}
+		}
+
+		peersdata := strings.Split(match[2], " ")
+		peers := make([]Peer, len(peersdata))
+
+		for i, data := range peersdata {
+			info := strings.Split(data, ":")
+			port, _ := strconv.Atoi(info[1])
+			peers[i].IP = info[0]
+			peers[i].Port = port
+		}
+		return true, PeersData{Key: match[1]}
+	}
+	return false, PeersData{}
 }
 
 func (f *File) GetFile() (string, int, int, string, bool) {

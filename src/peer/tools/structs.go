@@ -45,6 +45,16 @@ type DataData struct {
 	Pieces []Piece
 }
 
+type PeersData struct {
+	Key  string
+	Peer []Peer
+}
+
+type Peer struct {
+	IP   string
+	Port int
+}
+
 type BufferMap struct {
 	Length      int
 	BitSequence []byte

@@ -86,5 +86,9 @@ func TestGetPieces(t *testing.T) {
 	if !success3 || !tools.GetPiecesCmp(getPiecesData3, expectedGetPiecesData3) {
 		t.Errorf("HaveCheck failed. Expected: true %v, Got: %v %v", expectedGetPiecesData3, success3, getPiecesData3)
 	}
+}
+
+func TestData(t *testing.T) {
+	fmt.Println(">>> Data regex")
 
 }

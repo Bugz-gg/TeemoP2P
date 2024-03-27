@@ -7,17 +7,22 @@ import (
 	"strings"
 )
 
-var LocalFiles = map[string]*File{}  // Supposing no collision will happen during the project
-var RemoteFiles = map[string]*File{} // Switch to map[string]*File{} ?
+// LocalFiles A map to store local files' data.
+var LocalFiles = map[string]*File{} // Supposing no collision will happen during the project
+// RemoteFiles A map to store remote files' data.
+var RemoteFiles = map[string]*File{} // Supposing no collision will happen during the project
 
+// AddFile adds a file to a map. (LocalFiles and RemoteFiles in this project.)
 func AddFile(fileMap map[string]*File, file *File) {
 	fileMap[file.Key] = file
 }
 
+// RemoveFile removes a file from a map.  (LocalFiles and RemoteFiles in this project.)
 func RemoveFile(fileMap map[string]*File, file File) {
 	delete(fileMap, file.Key)
 }
 
+// Map is a function to apply a function on all elements of an array.
 func Map[T, V any](ts []T, fn func(T) V) []V {
 	result := make([]V, len(ts))
 	for i, t := range ts {
@@ -26,6 +31,7 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 	return result
 }
 
+// ListRegexGen provides the function that returns the compiled regex expression for the `list` message.
 func ListRegexGen() (ListRegex func() *regexp.Regexp) {
 	listPattern := `^list \[(.*)\]$`
 	listRegex := regexp.MustCompile(listPattern)
@@ -34,8 +40,10 @@ func ListRegexGen() (ListRegex func() *regexp.Regexp) {
 	}
 }
 
+// ListRegex is the function provided by ListRegexGen.
 var ListRegex = ListRegexGen()
 
+// InterestedRegexGen provides the function that returns the compiled regex expression for the `interested` message.
 func InterestedRegexGen() (InterestedRegex func() *regexp.Regexp) {
 	interestedPattern := `^interested (?<key>[a-zA-Z0-9]{32})$` // Add optional leech if necessary
 	interestedRegex := regexp.MustCompile(interestedPattern)
@@ -44,8 +52,10 @@ func InterestedRegexGen() (InterestedRegex func() *regexp.Regexp) {
 	}
 }
 
+// InterestedRegex is the function provided by InterestedRegexGen.
 var InterestedRegex = InterestedRegexGen()
 
+// HaveRegexGen provides the function that returns the compiled regex expression for the `have` message.
 func HaveRegexGen() (HaveRegex func() *regexp.Regexp) {
 	havePattern := `^have ([a-zA-Z0-9]{32}) ([01]*)$` // Add optional leech if necessary
 	haveRegex := regexp.MustCompile(havePattern)
@@ -54,8 +64,10 @@ func HaveRegexGen() (HaveRegex func() *regexp.Regexp) {
 	}
 }
 
+// HaveRegex is the function provided by HaveRegexGen.
 var HaveRegex = HaveRegexGen()
 
+// GetPiecesRegexGen provides the function that returns the compiled regex expression for the `getpieces` message.
 func GetPiecesRegexGen() (GetPiecesRegex func() *regexp.Regexp) {
 	getPiecesPattern := `^getpieces ([a-zA-Z0-9]{32}) \[([0-9 ]*)\]$` // Add optional leech if necessary
 	getPiecesRegex := regexp.MustCompile(getPiecesPattern)
@@ -64,8 +76,10 @@ func GetPiecesRegexGen() (GetPiecesRegex func() *regexp.Regexp) {
 	}
 }
 
+// GetPiecesRegex is the function provided by GetPiecesRegexGen.
 var GetPiecesRegex = GetPiecesRegexGen()
 
+// DataRegexGen provides the function that returns the compiled regex expression for the `data` message.
 func DataRegexGen() (DataRegex func() *regexp.Regexp) { // To be tested
 	dataPattern := `^data ([a-zA-Z0-9]{32}) \[((?:[0-9]*:[01]*| )*)\]$` // Add optional leech if necessary
 	dataRegex := regexp.MustCompile(dataPattern)
@@ -74,8 +88,10 @@ func DataRegexGen() (DataRegex func() *regexp.Regexp) { // To be tested
 	}
 }
 
+// DataRegex is the function provided by DataRegexGen.
 var DataRegex = DataRegexGen()
 
+// PeersRegexGen provides the function that returns the compiled regex expression for the `peers` message.
 func PeersRegexGen() (PeersRegex func() *regexp.Regexp) { // IPv4
 	peersPattern := `^peers [a-zA-Z0-9]{32} \[(?:[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+| )\]$`
 	peersRegex := regexp.MustCompile(peersPattern)
@@ -84,8 +100,10 @@ func PeersRegexGen() (PeersRegex func() *regexp.Regexp) { // IPv4
 	}
 }
 
+// PeersRegex is the function provided by PeersRegexGen.
 var PeersRegex = PeersRegexGen()
 
+// ListCheck checks the format of a `list` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func ListCheck(message string) (bool, ListData) {
 	if match := ListRegex().FindStringSubmatch(message); match != nil {
 		filesData := strings.Split(match[1], " ")
@@ -118,6 +136,7 @@ func ListCheck(message string) (bool, ListData) {
 	return false, ListData{}
 }
 
+// InterestedCheck checks the format of a `interested` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func InterestedCheck(message string) (bool, InterestedData) {
 	if match := InterestedRegex().FindStringSubmatch(message); match != nil {
 		if _, valid := LocalFiles[match[1]]; !valid {
@@ -129,6 +148,7 @@ func InterestedCheck(message string) (bool, InterestedData) {
 	return false, InterestedData{}
 }
 
+// HaveCheck checks the format of a `have` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func HaveCheck(message string) (bool, HaveData) {
 	if match := HaveRegex().FindStringSubmatch(message); match != nil {
 		buffer := match[2]
@@ -145,6 +165,7 @@ func HaveCheck(message string) (bool, HaveData) {
 	return false, HaveData{}
 }
 
+// GetPiecesCheck checks the format of a `getpieces` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func GetPiecesCheck(message string) (bool, GetPiecesData) {
 	if match := GetPiecesRegex().FindStringSubmatch(message); match != nil {
 		buffer := match[2]
@@ -169,6 +190,7 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 	return false, GetPiecesData{}
 }
 
+// DataCheck checks the format of a `data` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func DataCheck(message string) (bool, DataData) {
 	if match := DataRegex().FindStringSubmatch(message); match != nil {
 		buffer := match[2]
@@ -215,6 +237,7 @@ func DataCheck(message string) (bool, DataData) {
 	return false, DataData{}
 }
 
+// PeersCheck checks the format of a `peers` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func PeersCheck(message string) (bool, PeersData) {
 	if match := PeersRegex().FindStringSubmatch(message); match != nil {
 		buffer := match[2]

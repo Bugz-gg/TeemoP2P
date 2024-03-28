@@ -1,10 +1,17 @@
-CC=gcc
-CFLAGS+= -std=c11 -Wall -Werror
+CC = gcc
+CFLAGS = -std=c11 -Wall -Werror -g
+LDFLAGS = -lpthread
+OBJ = main.o thpool.o tools.o tracker.o
+DEPS = thpool.h tools.h tracker.h
+TARGET = server
 
-all : main
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
-main: main.c
-	$(CC) $(CFLAGS) $^ -o $@
+$(TARGET): $(OBJ)
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+.PHONY: clean
+
 clean:
-	rm -f *~ *.o main
-
+	rm -f $(OBJ) $(TARGET)

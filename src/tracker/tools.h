@@ -57,6 +57,11 @@ struct file {
     BufferMap buffer_map;
 };
 
+typedef struct {
+    char key[32];
+    int is_valid;
+} getfileData;
+
 int streq(char *, char *);
 
 void set_bit(BufferMap, int);
@@ -66,11 +71,14 @@ int is_bit_set(BufferMap, int);
 regex_t *announce_regex();
 regex_t *look_regex();
 regex_t *comparison_regex();
+regex_t *getfile_regex();
 announceData announceCheck(char *);
 lookData lookCheck(char *);
+getfileData getfileCheck(char *);
 void printAnnounceData(announceData);
 void print_criterion(criterion);
 void printLookData(lookData);
+void printGetFileData(getfileData);
 void free_announceData(announceData *);
 
 void free_regex(regex_t *);

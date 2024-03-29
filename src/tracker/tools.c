@@ -75,6 +75,21 @@ regex_t *comparison_regex() {
     return regex;
 }
 
+regex_t *getfile_regex() {
+    static regex_t *regex = NULL;
+    if (regex != NULL)
+        return regex;
+    regex = malloc(sizeof(regex_t));
+    char *pattern = "^getfile ([a-zA-Z0-9]{32})$";
+    int ret = regcomp(regex, pattern, REG_EXTENDED);
+    if (ret) {
+        char error_message[100];
+        regerror(ret, regex, error_message, sizeof(error_message));
+        fprintf(stderr, "Failed to compile look regular expression. %s\n", error_message);
+    }
+    return regex;
+}
+
 void free_regex(regex_t *regex) {
     regfree(regex);
     free(regex);
@@ -267,6 +282,24 @@ lookData lookCheck(char *message) {
     return lookStruct;
 }
 
+getfileData getfileCheck(char *message) {
+    getfileData getfileStruct;
+    getfileStruct.is_valid = 0;
+
+    regex_t *regex = getfile_regex();
+    regmatch_t matches[2];
+    if (regexec(regex, message, 2, matches, 0)) {
+        fprintf(stderr, "Failed to match regular expression.\n");
+        return getfileStruct;
+    }
+    // Check if key in files.
+    for (int i = 0; i < 32; ++i)
+        getfileStruct.key[i] = *(message + matches[1].rm_so + i);
+
+    getfileStruct.is_valid = 1;
+    return getfileStruct;
+}
+
 void print_criterion(criterion crit) {
     switch (crit.criteria) {
         case FILENAME:
@@ -327,6 +360,15 @@ void printAnnounceData(announceData data) {
     }
 }
 
+void printGetFileData(getfileData data) {
+    if (data.is_valid) {
+        printf("getfile : key : %s\n", data.key);
+    } else {
+        printf("getfileData is not valid.\n");
+    }
+
+}
+
 void printLookData(lookData data) {
     printf("Nb criterions : %d\n", data.nb_criterions);
     for (int i = 0; i < data.nb_criterions; ++i) {
@@ -344,11 +386,14 @@ int main() {
     lookData data3 = lookCheck("look [filename=\"Enfin\"]");
     lookData data4 = lookCheck("look [filesize=\"9128\" filename=\"Alttab\"]");
 
+    getfileData getfile = getfileCheck("getfile jzicsfnt8SBYA8NS8AZNY8SN9dkzo83h");
+
 
     printAnnounceData(data);
     printAnnounceData(data2);
     printLookData(data3);
     printLookData(data4);
+    printGetFileData(getfile);
 
     free_regex(announce_regex());
     free_regex(look_regex());

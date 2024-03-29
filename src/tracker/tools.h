@@ -31,6 +31,7 @@ typedef struct {
     File *files;
     unsigned int nb_leech_keys;
     char **leechKeys;
+    int is_valid;
 } announceData;
 
 typedef struct {
@@ -47,6 +48,7 @@ typedef struct {
 typedef struct {
     unsigned int nb_criterions;
     criterion *criterions;
+    int is_valid;
 } lookData;
 
 struct file {

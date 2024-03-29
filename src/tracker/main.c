@@ -8,25 +8,35 @@
 #include <netinet/in.h>
 #include <stdbool.h>
 #include "thpool.h" 
+#include "tools.h"
 #ifndef NB_THREADS
-#define NB_THREADS 5
+#define NB_THREADS 2
 #endif
 
 void error(char *msg) {
     perror(msg);
     exit(1);
 }
-bool check_message(char* buffer){
 
-    return  false ;
+bool check_message(char* message){
+    /* segmentation fault s
+    announceData d= announceCheck(message);
+    printAnnounceData(d);
+    return  d.is_valid ;*/ 
+    /* segmentation fault
+    lookData d=lookCheck(message);
+    printLookData(d);
+    return d.is_valid;*/
+    return false;
 }
+
 // Fonction pour gérer les connexions clients dans des threads
 void handle_client_connection(void* newsockfd_void_ptr) {
     int newsockfd = (int)(intptr_t)newsockfd_void_ptr;
     char buffer[256];
     int error_count=0;
     while (1) {
-        bzero(buffer, 256);
+        memset(buffer, 0, 256);
         int n = read(newsockfd, buffer, 255);
         if (n < 0) {
             error("ERROR reading from socket");
@@ -36,6 +46,13 @@ void handle_client_connection(void* newsockfd_void_ptr) {
             // Le client a fermé la connexion
             printf("Client disconnected\n");
             break; 
+        }
+        
+        buffer[strcspn(buffer, "\r\n")] = 0;
+        if (strcmp(buffer, "exit") == 0) {
+            printf("Client requested to disconnect.\n");
+            close(newsockfd);
+            break;
         }
         // Vérifie si le message est bien formaté
         int is_formatted_correctly = check_message(buffer);
@@ -61,7 +78,8 @@ void handle_client_connection(void* newsockfd_void_ptr) {
 }}
 
 int main(int argc, char *argv[]) {
-    int sockfd, newsockfd, portno, clilen;
+    int sockfd, newsockfd, portno;
+    socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
 
     if (argc < 2) {
@@ -75,7 +93,7 @@ int main(int argc, char *argv[]) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
-    bzero((char *) &serv_addr, sizeof(serv_addr));
+    memset((char *) &serv_addr, 0, sizeof(serv_addr));
     portno = atoi(argv[1]);
 
     serv_addr.sin_family = AF_INET;

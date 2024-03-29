@@ -105,7 +105,7 @@ void free_lookData(lookData *data) {
 announceData announceCheck(char *message) { // TODO : Valid announceStruct if error
     announceData announceStruct;
     announceStruct.files = NULL;
-
+    announceStruct.is_valid=0;
     regex_t *regex = announce_regex();
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
@@ -158,6 +158,7 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
     announceStruct.nb_files = nbFiles;
     announceStruct.files = files;
     announceStruct.nb_leech_keys = nb_leech_keys;
+    announceStruct.is_valid=1;
     announceStruct.leechKeys = malloc(nb_leech_keys * 33 * sizeof(char));
 
     free(filesData);
@@ -169,6 +170,7 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
 lookData lookCheck(char *message) {
     lookData lookStruct;
     lookStruct.criterions = NULL;
+    lookStruct.is_valid=0;
 
     regex_t *regex = look_regex();
     regmatch_t matches[3];
@@ -261,7 +263,7 @@ lookData lookCheck(char *message) {
 
     lookStruct.nb_criterions = count;
     lookStruct.criterions = criterions;
-
+    lookStruct.is_valid=1;
     free(criterions_str);
 
     return lookStruct;
@@ -325,6 +327,7 @@ void printAnnounceData(announceData data) {
     for (int i = 0; i < data.nb_leech_keys; ++i) {
         printf("Leech key %d: %s\n", i + 1, data.leechKeys[i]);
     }
+    printf("Is valid: %d\n" , data.is_valid);
 }
 
 void printLookData(lookData data) {
@@ -335,28 +338,3 @@ void printLookData(lookData data) {
 }
 
 
-int main() {
-    announceData data = announceCheck(
-            "announce listen 2222 seed [teemo 14 5 jzichfnt8SBYA8NS8AZNY8SN9kzox83h]");
-    announceData data2 = announceCheck(
-            "announce listen 2522 seed [ferIV 120 13 9kOz8SB18SBYA8NS8AZNY8SN9kzox83h interruption 94 3 8jzkhfnt8SBYA8NS8AZNY8SN9kzox83h]");
-
-    lookData data3 = lookCheck("look [filename=\"Enfin\"]");
-    lookData data4 = lookCheck("look [filesize=\"9128\" filename=\"Alttab\"]");
-
-
-    printAnnounceData(data);
-    printAnnounceData(data2);
-    printLookData(data3);
-    printLookData(data4);
-
-    free_regex(announce_regex());
-    free_regex(look_regex());
-    free_regex(comparison_regex());
-    free_announceData(&data);
-    free_announceData(&data2);
-    free_lookData(&data3);
-    free_lookData(&data4);
-
-    return 0;
-}

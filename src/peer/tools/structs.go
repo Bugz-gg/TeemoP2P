@@ -53,8 +53,8 @@ type DataData struct {
 
 // PeersData is the struct returned by PeersCheck.
 type PeersData struct {
-	Key  string
-	Peer []Peer
+	Key   string
+	Peers []Peer
 }
 
 // Peer is a struct used by PeersData.
@@ -156,4 +156,20 @@ func BufferMapCmp(bM1 BufferMap, bM2 BufferMap) bool {
 		}
 	}
 	return true
+}
+
+func PeersCmp(pD1 PeersData, pD2 PeersData) bool {
+	if pD1.Key != pD2.Key || len(pD1.Peers) != len(pD2.Peers) {
+		return false
+	}
+	for i, peer := range pD1.Peers {
+		if !PeerCmp(peer, pD2.Peers[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func PeerCmp(p1 Peer, p2 Peer) bool {
+	return p1.IP == p2.IP && p1.Port == p2.Port
 }

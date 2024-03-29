@@ -126,3 +126,27 @@ func TestData(t *testing.T) {
 		t.Errorf("DataCheck failed. Expected: true %v, Got: %v %v", expectedDataData4, success4, dataData4)
 	}
 }
+
+func TestPeers(t *testing.T) {
+	fmt.Println(">>> Peers regex")
+
+	// No peer given
+	success, peersData := tools.PeersCheck("peers UizhsjakhzUizhsja8hzUizhsja8hzsu []")
+	expectedPeersData := tools.PeersData{}
+	if success || !tools.PeersCmp(peersData, expectedPeersData) {
+		t.Errorf("PeersCheck failed. Expected: false %v, Got: %v %v", expectedPeersData, success, peersData)
+	}
+
+	// Wrong peer format
+	success2, peersData2 := tools.PeersCheck("peers Uizhsja8hzUizhsja8hzUizhsja8hzsu [0:0 893:0 88:1]")
+	if success2 || !tools.PeersCmp(peersData2, expectedPeersData) {
+		t.Errorf("PeersCheck failed. Expected: false %v, Got: %v %v", expectedPeersData, success2, peersData2)
+	}
+
+	// Correct
+	success4, peersData4 := tools.PeersCheck("peers Uizhsja8hzpolisja8hzUizhsja8hzsu [10.0.0.10:32 249.111.109.19:100]")
+	expectedPeersData4 := tools.PeersData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Peers: []tools.Peer{{IP: "10.0.0.10", Port: 32}, {IP: "249.111.109.19", Port: 100}}}
+	if !success4 || !tools.PeersCmp(peersData4, expectedPeersData4) {
+		t.Errorf("PeersCheck failed. Expected: true %v, Got: %v %v", expectedPeersData4, success4, peersData4)
+	}
+}

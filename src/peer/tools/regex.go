@@ -93,7 +93,7 @@ var DataRegex = DataRegexGen()
 
 // PeersRegexGen provides the function that returns the compiled regex expression for the `peers` message.
 func PeersRegexGen() (PeersRegex func() *regexp.Regexp) { // IPv4
-	peersPattern := `^peers [a-zA-Z0-9]{32} \[(?:[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+| )\]$`
+	peersPattern := `^peers ([a-zA-Z0-9]{32}) \[((?:[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+| )*)\]$`
 	peersRegex := regexp.MustCompile(peersPattern)
 	return func() *regexp.Regexp {
 		return peersRegex
@@ -251,8 +251,9 @@ func PeersCheck(message string) (bool, PeersData) {
 			fmt.Println("No peer given.")
 			return false, PeersData{}
 		}
-
+		// TODO: Check is match[1] is in RemoteFile
 		peersdata := strings.Split(match[2], " ")
+
 		peers := make([]Peer, len(peersdata))
 
 		for i, data := range peersdata {
@@ -261,7 +262,7 @@ func PeersCheck(message string) (bool, PeersData) {
 			peers[i].IP = info[0]
 			peers[i].Port = port
 		}
-		return true, PeersData{Key: match[1]}
+		return true, PeersData{Key: match[1], Peers: peers}
 	}
 	return false, PeersData{}
 }

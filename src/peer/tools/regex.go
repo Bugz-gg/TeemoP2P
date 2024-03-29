@@ -155,8 +155,14 @@ func HaveCheck(message string) (bool, HaveData) {
 		if len(buffer) == 0 {
 			buffer = "0"
 		}
-		file := RemoteFiles[match[1]]
-		file = &File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
+		//file := RemoteFiles[match[1]]
+
+		if _, valid := LocalFiles[match[1]]; !valid {
+			fmt.Println("No such file locally.")
+			return false, HaveData{}
+		}
+		file := LocalFiles[match[1]]
+		//file = &File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
 		if len(buffer) != BufferBitSize(*file) {
 			return false, HaveData{}
 		}

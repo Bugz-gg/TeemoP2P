@@ -120,7 +120,7 @@ void free_lookData(lookData *data) {
 announceData announceCheck(char *message) { // TODO : Valid announceStruct if error
     announceData announceStruct;
     announceStruct.files = NULL;
-    announceStruct.is_valid=0;
+    announceStruct.is_valid = 0;
     regex_t *regex = announce_regex();
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
@@ -173,7 +173,7 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
     announceStruct.nb_files = nbFiles;
     announceStruct.files = files;
     announceStruct.nb_leech_keys = nb_leech_keys;
-    announceStruct.is_valid=1;
+    announceStruct.is_valid = 1;
     announceStruct.leechKeys = malloc(nb_leech_keys * 33 * sizeof(char));
 
     free(filesData);
@@ -185,7 +185,7 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
 lookData lookCheck(char *message) {
     lookData lookStruct;
     lookStruct.criterions = NULL;
-    lookStruct.is_valid=0;
+    lookStruct.is_valid = 0;
 
     regex_t *regex = look_regex();
     regmatch_t matches[3];
@@ -278,7 +278,7 @@ lookData lookCheck(char *message) {
 
     lookStruct.nb_criterions = count;
     lookStruct.criterions = criterions;
-    lookStruct.is_valid=1;
+    lookStruct.is_valid = 1;
     free(criterions_str);
 
     return lookStruct;
@@ -351,16 +351,19 @@ void print_criterion(criterion crit) {
 }
 
 void printAnnounceData(announceData data) {
-    printf("Port: %d\n", data.port);
-    for (int i = 0; i < data.nb_files; ++i) {
-        printf("File %d: %s, Size: %d, PieceSize: %d, Key: %s\n", i + 1,
-               data.files[i].name, data.files[i].size, data.files[i].pieceSize,
-               data.files[i].key);
+    if (data.is_valid) {
+        printf("Port: %d\n", data.port);
+        for (int i = 0; i < data.nb_files; ++i) {
+            printf("File %d: %s, Size: %d, PieceSize: %d, Key: %s\n", i + 1,
+                   data.files[i].name, data.files[i].size, data.files[i].pieceSize,
+                   data.files[i].key);
+        }
+        for (int i = 0; i < data.nb_leech_keys; ++i) {
+            printf("Leech key %d: %s\n", i + 1, data.leechKeys[i]);
+        }
+    } else {
+        printf("announceData is not valid.\n");
     }
-    for (int i = 0; i < data.nb_leech_keys; ++i) {
-        printf("Leech key %d: %s\n", i + 1, data.leechKeys[i]);
-    }
-    printf("Is valid: %d\n" , data.is_valid);
 }
 
 void printGetFileData(getfileData data) {
@@ -369,13 +372,16 @@ void printGetFileData(getfileData data) {
     } else {
         printf("getfileData is not valid.\n");
     }
-
 }
 
 void printLookData(lookData data) {
-    printf("Nb criterions : %d\n", data.nb_criterions);
-    for (int i = 0; i < data.nb_criterions; ++i) {
-        print_criterion(data.criterions[i]);
+    if (data.is_valid) {
+        printf("Nb criterions : %d\n", data.nb_criterions);
+        for (int i = 0; i < data.nb_criterions; ++i) {
+            print_criterion(data.criterions[i]);
+        }
+    } else {
+        printf("lookData is not valid.\n");
     }
 }
 

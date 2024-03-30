@@ -24,7 +24,7 @@ regex_t *announce_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^announce listen ([0-9]+) seed \\[([a-zA-Z0-9 ]*)\\]$";
+    char *pattern = "^announce listen ([0-9]+) seed \\[([a-zA-Z0-9 ]*)\\]( leech \\[(( |[a-zA-Z0-9]{32})*)\\])?$";
     if (regcomp(regex, pattern, REG_EXTENDED)) {
         fprintf(stderr, "Failed to compile regular expression\n");
     }
@@ -99,13 +99,13 @@ void free_lookData(lookData *data) {
 }
 
 // Function to check announce message
-announceData announceCheck(char *message) { // TODO : Valid announceStruct if error
+announceData announceCheck(char *message) {
     announceData announceStruct;
     announceStruct.files = NULL;
     announceStruct.is_valid = 0;
     regex_t *regex = announce_regex();
-    regmatch_t matches[3];
-    if (regexec(regex, message, 3, matches, 0)) {
+    regmatch_t matches[5];
+    if (regexec(regex, message, 5, matches, 0)) {
         fprintf(stderr, "Failed to match regular expression\n");
         return announceStruct;
     }
@@ -119,7 +119,7 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
 
     char *filesData = strndup(message + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
     int count = countDelim(filesData);
-    int nb_leech_keys = 0; // Add leech key handling
+
     if (count % 4) {
         fprintf(stderr, "Wrong file data.\n");
         return announceStruct;
@@ -143,7 +143,7 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
                 fprintf(stderr, "Wrong md5sum hash size for %s.\n", files[index / 4].name);
                 return announceStruct;
             }
-            for (int i=0; i<32; ++i) {
+            for (int i = 0; i < 32; ++i) {
                 files[index / 4].key[i] = token[i];
             }
             files[index / 4].key[32] = '\0';
@@ -152,12 +152,27 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
         ++index;
     }
 
+    int nb_leech_keys = 0;
+    char *leechData = strndup(message + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
+    count = countDelim(leechData);
+    char **leechKeys = malloc(count * sizeof(char *));
+    token = strtok(leechData, DELIM);
+    int leech_index = 0;
+    while (token != NULL) {
+        leechKeys[leech_index] = malloc(33 * sizeof(char));
+        strncpy(leechKeys[leech_index], token, 32);
+        leechKeys[leech_index][32] = '\0';
+        token = strtok(NULL, DELIM);
+        ++nb_leech_keys;
+        ++leech_index;
+    }
+
     announceStruct.port = port;
     announceStruct.nb_files = nbFiles;
     announceStruct.files = files;
     announceStruct.nb_leech_keys = nb_leech_keys;
     announceStruct.is_valid = 1;
-    announceStruct.leechKeys = malloc(nb_leech_keys * 33 * sizeof(char));
+    announceStruct.leechKeys = leechKeys;
 
     free(filesData);
 

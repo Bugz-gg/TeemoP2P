@@ -17,14 +17,14 @@ void test_announce() {
     expected_files->pieceSize = 7;
     strncpy(expected_files->key, "jzichfnt8SBYA8NS8AZNY8SN9kzox83h", 33);
 
-    announceData expected_data = {.port=2222, .nb_files=1, .files = expected_files, .nb_leech_keys = 0};//, .files};
+    announceData expected_data = {.port=2222, .nb_files=1, .files = expected_files, .nb_leech_keys = 0, .is_valid=1};
     assert(announceStructCmp(data, expected_data));
 
     // 1 leech key
     announceData data2 = announceCheck(
             "announce listen 4222 seed [] leech [jzichfnt8SBnA8NS8AZNY8SN9kzox83h]");
     char *expected_leech_key = "jzichfnt8SBnA8NS8AZNY8SN9kzox83h";
-    announceData expected_data2 = {.port=4222, .nb_files=0, .nb_leech_keys = 1, .leechKeys = &expected_leech_key};//, .files};
+    announceData expected_data2 = {.port=4222, .nb_files=0, .nb_leech_keys = 1, .leechKeys = &expected_leech_key, .is_valid=1};
     assert(announceStructCmp(data2, expected_data2));
 
     //2 leech keys
@@ -35,7 +35,7 @@ void test_announce() {
     char *expected_leech_keys[2];
     expected_leech_keys[0] = expected_leech_key1;
     expected_leech_keys[1] = expected_leech_key2;
-    announceData expected_data3 = {.port=4222, .nb_files=0, .nb_leech_keys = 2, .leechKeys = expected_leech_keys};//, .files};
+    announceData expected_data3 = {.port=4222, .nb_files=0, .nb_leech_keys = 2, .leechKeys = expected_leech_keys, .is_valid=1};
     assert(announceStructCmp(data3, expected_data3));
 
     //2 files and 2 leech keys
@@ -55,7 +55,7 @@ void test_announce() {
     char *expected_leech_keys4[2];
     expected_leech_keys4[0] = expected_leech_key1_4;
     expected_leech_keys4[1] = expected_leech_key2_4;
-    announceData expected_data4 = {.port=2522, .nb_files=2, .files=expected_files4,.nb_leech_keys = 2, .leechKeys = expected_leech_keys4};//, .files};
+    announceData expected_data4 = {.port=2522, .nb_files=2, .files=expected_files4,.nb_leech_keys = 2, .leechKeys = expected_leech_keys4, .is_valid=1};
     assert(announceStructCmp(data4, expected_data4));
 
     free_announceData(&data);
@@ -70,13 +70,25 @@ void test_announce() {
 
 void test_look() {
     printf(">>> look...");
-    lookData data3 = lookCheck("look [filename=\"Enfin\"]");
-    lookData data4 = lookCheck("look [filesize=\"9128\" filename=\"Alttab\"]");
-    //printLookData(data3);
-    //printLookData(data4);
+    lookData data = lookCheck("look [filename=\"Enfin\"]");
+    lookData data2 = lookCheck("look [filesize>=\"9128\" filename=\"Alttab\"]");
+    char *name = "Enfin";
+    criterion crit = {.criteria=FILENAME, .op=EQ, .value_type=STR,.value.value_str = name};
+    lookData expected_look_data = {.nb_criterions=1, .criterions=&crit, .is_valid=1};
+    assert(lookStructCmp(data, expected_look_data));
+
+    char *name2 = "Alttab";
+    criterion crit2 = {.criteria=FILENAME, .op=EQ, .value_type=STR,.value.value_str = name2};
+    criterion crit3 = {.criteria=FILESIZE, .op=GE, .value_type=INT, .value.value_int = 9128};
+    criterion crits[2];
+    crits[0] = crit2;
+    crits[1] = crit3;
+    lookData expected_look_data2 = {.nb_criterions=2, .criterions=crits, .is_valid=1};
+    assert(lookStructCmp(data2, expected_look_data2));
+
     free_regex(look_regex());
-    free_lookData(&data3);
-    free_lookData(&data4);
+    free_lookData(&data);
+    free_lookData(&data2);
 
     printf("\033[92mpassed\033[39m\n");
 }

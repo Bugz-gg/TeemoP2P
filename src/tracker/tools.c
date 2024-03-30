@@ -201,7 +201,7 @@ lookData lookCheck(char *message) {
         return lookStruct;
     }
     regex_t *comp_regex = comparison_regex();
-    regmatch_t comparison_match[4];
+    regmatch_t comparison_match[5];
 
 
     criterion *criterions = malloc(count * sizeof(criterion));
@@ -212,12 +212,13 @@ lookData lookCheck(char *message) {
     float float_val;
     int index = 0;
     int len_crit;
+    char value[100]; // Supposing the max length for the criterions' values is 100.
 
     char criteria[25];
 
     while (token != NULL) {
-        if (regexec(comp_regex, token, 4, comparison_match, 0)) {
-            fprintf(stderr, "Failed to match regular expression.\n");
+        if (regexec(comp_regex, token, 5, comparison_match, 0)) {
+            fprintf(stderr, "Failed to match criterion expression.\n");
             return lookStruct;
         }
 
@@ -254,8 +255,9 @@ lookData lookCheck(char *message) {
             fprintf(stderr, "Incorrect operator.\n");
             return lookStruct;
         }
-
-        int_val = strtol(token + comparison_match[3].rm_so, &endptr, 10);
+        strncpy(value, token + comparison_match[4].rm_so, comparison_match[4].rm_eo - comparison_match[4].rm_so);
+        value[comparison_match[4].rm_eo - comparison_match[4].rm_so] = '\0';
+        int_val = strtol(value, &endptr, 10);
         if (*endptr == '\0') {
             criterions[index].value_type = INT;
             criterions[index].value.value_int = int_val;
@@ -266,7 +268,8 @@ lookData lookCheck(char *message) {
                 criterions[index].value.value_float = float_val;
             } else {
                 criterions[index].value_type = STR;
-                criterions[index].value.value_str = strndup(token, strlen(token));
+                criterions[index].value.value_str = strndup(value,
+                                                            comparison_match[4].rm_eo - comparison_match[4].rm_so);
             }
         }
 
@@ -342,8 +345,13 @@ int lookStructCmp(lookData l1, lookData l2) {
     if (l1.nb_criterions != l2.nb_criterions)
         return 0;
     for (int i = 0; i < l1.nb_criterions; ++i) {
-        if (!criterionCmp(l1.criterions[i], l2.criterions[i]))
-            return 0;
+        for (int j = 0; j < l1.nb_criterions; ++j) {
+            if (criterionCmp(l1.criterions[i], l2.criterions[j]))
+                break;
+            if (j == l1.nb_criterions - 1)
+                return 0;
+        }
+
     }
     return 1;
 }
@@ -372,7 +380,7 @@ void print_criterion(criterion crit) {
             printf("equal to ");
             break;
         case GE:
-            printf("greater than or equal to");
+            printf("greater than or equal to ");
             break;
         case GT:
             printf("greater than ");
@@ -385,13 +393,13 @@ void print_criterion(criterion crit) {
     }
     switch (crit.value_type) {
         case INT:
-            printf("%d\n", crit.value.value_int);
+            printf("%d (INT)\n", crit.value.value_int);
             break;
         case FLOAT:
-            printf("%f\n", crit.value.value_float);
+            printf("%f (FLOAT)\n", crit.value.value_float);
             break;
         case STR:
-            printf("%s\n", crit.value.value_str);
+            printf("%s (STR)\n", crit.value.value_str);
             break;
         default:
             printf("UNRECOGNISED_VALUE\n");

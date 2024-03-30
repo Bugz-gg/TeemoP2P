@@ -19,23 +19,6 @@ int streq(char *str1, char *str2) {
     return !strcmp(str1, str2);
 }
 
-// Set the nth bit of the buffer map to 1.
-void set_bit(BufferMap buffer_map, int n) {
-    if (n >= buffer_map.len)
-        printf("OUT OF RANGE !\n");
-    buffer_map.bit_sequence[n / BITS_PER_INT] |= 1 << (n % BITS_PER_INT);
-}
-
-// Set the nth bit of the buffer map to 0.
-void clear_bit(BufferMap buffer_map, int n) {
-    buffer_map.bit_sequence[n / BITS_PER_INT] &= ~(1 << (n % BITS_PER_INT));
-}
-
-// Check if the nth bit of the buffer map is 1.
-int is_bit_set(BufferMap buffer_map, int n) {
-    return (buffer_map.bit_sequence[n / BITS_PER_INT] >> (n % BITS_PER_INT)) & 1;
-}
-
 regex_t *announce_regex() {
     static regex_t *regex = NULL;
     if (regex != NULL)
@@ -97,7 +80,6 @@ void free_regex(regex_t *regex) {
 
 void free_file(File *file) {
     free(file->name);
-    free(file->key);
 }
 
 void free_announceData(announceData *data) {
@@ -161,9 +143,10 @@ announceData announceCheck(char *message) { // TODO : Valid announceStruct if er
                 fprintf(stderr, "Wrong md5sum hash size for %s.\n", files[index / 4].name);
                 return announceStruct;
             }
-            files[index / 4].key = strndup(token, 32);
-            BufferMap tmp = {(files[index / 4].size - 1) / files[index / 4].pieceSize / BITS_PER_INT + 1};
-            files[index / 4].buffer_map = tmp;
+            for (int i=0; i<32; ++i) {
+                files[index / 4].key[i] = token[i];
+            }
+            files[index / 4].key[32] = '\0';
         }
         token = strtok(NULL, DELIM);
         ++index;
@@ -196,7 +179,7 @@ lookData lookCheck(char *message) {
 
     char *criterions_str = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
     int count = countDelim(criterions_str);
-    printf("%s\n", criterions_str);
+    //printf("%s\n", criterions_str);
     count = count + (!count && matches[1].rm_eo - matches[1].rm_so);
     if (!count) {
         fprintf(stderr, "No criteria found.\n");
@@ -297,10 +280,60 @@ getfileData getfileCheck(char *message) {
     // Check if key in files.
     for (int i = 0; i < 32; ++i)
         getfileStruct.key[i] = *(message + matches[1].rm_so + i);
-
+    getfileStruct.key[32] = '\0';
     getfileStruct.is_valid = 1;
     return getfileStruct;
 }
+
+int peerCmp(Peer p1, Peer p2) {
+    return streq(p1.IP, p2.IP) && p1.port == p2.port;
+}
+
+int fileCmp(File f1, File f2) { // The equality of the peers having the file is not checked.
+    return streq(f1.name, f2.name) && f1.size == f2.size && f1.pieceSize == f2.pieceSize && streq(f1.key, f2.key);
+}
+
+int announceStructCmp(announceData a1, announceData a2) {
+    if (a1.port != a2.port || a1.nb_files != a2.nb_files || a1.nb_leech_keys != a2.nb_leech_keys)
+        return 0;
+
+    for (int i = 0; i < a1.nb_files; ++i) {
+        if (!fileCmp(a1.files[i], a2.files[i]))
+            return 0;
+    }
+    for (int i = 0; i < a1.nb_leech_keys; ++i) {
+        if (!streq(a1.leechKeys[i], a2.leechKeys[i]))
+            return 0;
+    }
+    return 1;
+}
+
+int criterionCmp(criterion c1, criterion c2) {
+    if (c1.value_type != c2.value_type || c1.criteria != c2.criteria || c1.op != c2.op)
+        return 0;
+    switch (c1.value_type) {
+        case INT:
+            return c1.value.value_int == c2.value.value_int;
+        case FLOAT:
+            return c1.value.value_float == c2.value.value_float;
+        case STR:
+            return streq(c1.value.value_str, c2.value.value_str);
+        default:
+            return 0;
+    }
+}
+
+int lookStructCmp(lookData l1, lookData l2) {
+    if (l1.nb_criterions != l2.nb_criterions)
+        return 0;
+    for (int i = 0; i < l1.nb_criterions; ++i) {
+        if (!criterionCmp(l1.criterions[i], l2.criterions[i]))
+            return 0;
+    }
+    return 1;
+}
+
+int getfileStructCmp(getfileData, getfileData);
 
 void print_criterion(criterion crit) {
     switch (crit.criteria) {
@@ -384,5 +417,7 @@ void printLookData(lookData data) {
         printf("lookData is not valid.\n");
     }
 }
+
+
 
 

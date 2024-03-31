@@ -58,10 +58,35 @@ void test_announce() {
     announceData expected_data4 = {.port=2522, .nb_files=2, .files=expected_files4,.nb_leech_keys = 2, .leechKeys = expected_leech_keys4, .is_valid=1};
     assert(announceStructCmp(data4, expected_data4));
 
+    // Not valid
+    announceData data5 = announceCheck(
+            "announce listen 4222 seed [] leech [jzichfnt8SBnANS8AZNY8SN9kzox83h]");
+    announceData not_valid = {.is_valid=0};
+    assert(!announceStructCmp(data5, not_valid));
+    announceData data6 = announceCheck(
+            "announce listen 4222 seed [fgh 18 9 s]");
+    assert(!announceStructCmp(data6, not_valid));
+    announceData data7 = announceCheck(
+            "announce listen 4222 seed [fgh 18 9i jzichint8SBnANS8AZNsY8SN9kzox83h]");
+    assert(!announceStructCmp(data7, not_valid));
+
+    announceData data8 = announceCheck(
+            "announce listen 4222 seed [fgh 18o 2 jzichint8SBnANS8AZNsY8SN9kzox83h]");
+    assert(!announceStructCmp(data8, not_valid));
+    announceData data9 = announceCheck(
+            "announce listen 4222 seed [] leech [jzichfnt8SBnANS8AZNYsl8SN9kzox83h]");
+    assert(!announceStructCmp(data9, not_valid));
+
+
     free_announceData(&data);
     free_announceData(&data2);
     free_announceData(&data3);
     free_announceData(&data4);
+    free_announceData(&data5);
+    free_announceData(&data6);
+    free_announceData(&data7);
+    free_announceData(&data8);
+    free_announceData(&data9);
     free_regex(announce_regex());
     free(expected_files);
 
@@ -99,6 +124,7 @@ void test_getfile() {
     getfileData expected_data = {.key="jzicsfnt8SBYA8NS8AZNY8SN9dkzo83h", .is_valid=1};
     assert(getfileStructCmp(data, expected_data));
 
+    // Not valid
     getfileData not_valid = {.is_valid=0};
     getfileData data2 = getfileCheck("getfile jzicsfnt8SBA8NS8AZNY8SN9dkzo83h");
     assert(!getfileStructCmp(data2, not_valid));

@@ -103,6 +103,8 @@ announceData announceCheck(char *message) {
     announceData announceStruct;
     announceStruct.files = NULL;
     announceStruct.is_valid = 0;
+    announceStruct.nb_files = 0;
+    announceStruct.nb_leech_keys = 0;
     regex_t *regex = announce_regex();
     regmatch_t matches[5];
     if (regexec(regex, message, 5, matches, 0)) {

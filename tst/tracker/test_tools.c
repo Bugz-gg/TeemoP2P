@@ -95,10 +95,16 @@ void test_look() {
 
 void test_getfile() {
     printf(">>> getfile...");
-    getfileData getfile = getfileCheck("getfile jzicsfnt8SBYA8NS8AZNY8SN9dkzo83h");
-    //printGetFileData(getfile);
+    getfileData data = getfileCheck("getfile jzicsfnt8SBYA8NS8AZNY8SN9dkzo83h");
+    getfileData expected_data = {.key="jzicsfnt8SBYA8NS8AZNY8SN9dkzo83h", .is_valid=1};
+    assert(getfileStructCmp(data, expected_data));
+
+    getfileData not_valid = {.is_valid=0};
+    getfileData data2 = getfileCheck("getfile jzicsfnt8SBA8NS8AZNY8SN9dkzo83h");
+    assert(!getfileStructCmp(data2, not_valid));
+    getfileData data3 = getfileCheck("getfile jzi784sfnt8SBA8NS8AZNY8SN9dkzo83h");
+    assert(!getfileStructCmp(data3, not_valid));
     free_regex(comparison_regex());
-    (void)getfile;
     printf("\033[92mpassed\033[39m\n");
 }
 

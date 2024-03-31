@@ -312,7 +312,7 @@ int fileCmp(File f1, File f2) { // The equality of the peers having the file is 
 }
 
 int announceStructCmp(announceData a1, announceData a2) {
-    if (a1.port != a2.port || a1.nb_files != a2.nb_files || a1.nb_leech_keys != a2.nb_leech_keys)
+    if (!a1.is_valid || !a2.is_valid || a1.port != a2.port || a1.nb_files != a2.nb_files || a1.nb_leech_keys != a2.nb_leech_keys)
         return 0;
 
     for (int i = 0; i < a1.nb_files; ++i) {
@@ -342,7 +342,7 @@ int criterionCmp(criterion c1, criterion c2) {
 }
 
 int lookStructCmp(lookData l1, lookData l2) {
-    if (l1.nb_criterions != l2.nb_criterions)
+    if ((!l1.is_valid && !l2.is_valid) || l1.nb_criterions != l2.nb_criterions)
         return 0;
     for (int i = 0; i < l1.nb_criterions; ++i) {
         for (int j = 0; j < l1.nb_criterions; ++j) {
@@ -356,7 +356,9 @@ int lookStructCmp(lookData l1, lookData l2) {
     return 1;
 }
 
-int getfileStructCmp(getfileData, getfileData);
+int getfileStructCmp(getfileData gf1, getfileData gf2) {
+    return gf1.is_valid && gf2.is_valid && streq(gf1.key, gf2.key);
+}
 
 void print_criterion(criterion crit) {
     switch (crit.criteria) {

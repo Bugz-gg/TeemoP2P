@@ -41,7 +41,7 @@ void test_announce() {
     //2 files and 2 leech keys
     announceData data4 = announceCheck(
             "announce listen 2522 seed [ferIV 120 12 9kOz8SB18SBYA8NS8AZNY8SN9kzox83h interruption 94 2 8jzkhfnt8SBYA8NS8AZNY8SN9kzox83h] leech [jzichfnt818nA8N78jzkY8SN9kzox83h jzichfnt818nA8N7rlpNY8SN9kzox83h]");
-    File *expected_files4 = malloc(2*sizeof(File));
+    File *expected_files4 = malloc(2 * sizeof(File));
     expected_files4[0].name = strdup("ferIV");
     expected_files4[0].size = 120;
     expected_files4[0].pieceSize = 12;
@@ -55,7 +55,7 @@ void test_announce() {
     char *expected_leech_keys4[2];
     expected_leech_keys4[0] = expected_leech_key1_4;
     expected_leech_keys4[1] = expected_leech_key2_4;
-    announceData expected_data4 = {.port=2522, .nb_files=2, .files=expected_files4,.nb_leech_keys = 2, .leechKeys = expected_leech_keys4, .is_valid=1};
+    announceData expected_data4 = {.port=2522, .nb_files=2, .files=expected_files4, .nb_leech_keys = 2, .leechKeys = expected_leech_keys4, .is_valid=1};
     assert(announceStructCmp(data4, expected_data4));
 
     // Not valid
@@ -96,20 +96,25 @@ void test_announce() {
 void test_look() {
     printf(">>> look...");
     lookData data = lookCheck("look [filename=\"Enfin\"]");
-    lookData data2 = lookCheck("look [filesize>=\"9128\" filename=\"Alttab\"]");
     char *name = "Enfin";
-    criterion crit = {.criteria=FILENAME, .op=EQ, .value_type=STR,.value.value_str = name};
+    criterion crit = {.criteria=FILENAME, .op=EQ, .value_type=STR, .value.value_str = name};
     lookData expected_look_data = {.nb_criterions=1, .criterions=&crit, .is_valid=1};
     assert(lookStructCmp(data, expected_look_data));
 
+    lookData data2 = lookCheck("look [filesize>=\"9128\" filename=\"Alttab\"]");
     char *name2 = "Alttab";
-    criterion crit2 = {.criteria=FILENAME, .op=EQ, .value_type=STR,.value.value_str = name2};
+    criterion crit2 = {.criteria=FILENAME, .op=EQ, .value_type=STR, .value.value_str = name2};
     criterion crit3 = {.criteria=FILESIZE, .op=GE, .value_type=INT, .value.value_int = 9128};
     criterion crits[2];
     crits[0] = crit2;
     crits[1] = crit3;
     lookData expected_look_data2 = {.nb_criterions=2, .criterions=crits, .is_valid=1};
     assert(lookStructCmp(data2, expected_look_data2));
+
+    // Not valid
+    lookData data3 = lookCheck("look [filesie>=\"9128\" filename=\"Alltab\"]");
+    lookData not_valid = {.nb_criterions=0, .is_valid=0};
+    assert(!lookStructCmp(data3, not_valid));
 
     free_regex(look_regex());
     free_lookData(&data);

@@ -61,21 +61,21 @@ void test_announce() {
     // Not valid
     announceData data5 = announceCheck(
             "announce listen 4222 seed [] leech [jzichfnt8SBnANS8AZNY8SN9kzox83h]");
-    announceData not_valid = {.is_valid=0};
-    assert(!announceStructCmp(data5, not_valid));
+    announceData not_valid = {.is_valid=0, .nb_files=0, .nb_leech_keys=0, .port=0};
+    assert(announceStructCmp(data5, not_valid));
     announceData data6 = announceCheck(
             "announce listen 4222 seed [fgh 18 9 s]");
-    assert(!announceStructCmp(data6, not_valid));
+    assert(announceStructCmp(data6, not_valid));
     announceData data7 = announceCheck(
             "announce listen 4222 seed [fgh 18 9i jzichint8SBnANS8AZNsY8SN9kzox83h]");
-    assert(!announceStructCmp(data7, not_valid));
+    assert(announceStructCmp(data7, not_valid));
 
     announceData data8 = announceCheck(
             "announce listen 4222 seed [fgh 18o 2 jzichint8SBnANS8AZNsY8SN9kzox83h]");
-    assert(!announceStructCmp(data8, not_valid));
+    assert(announceStructCmp(data8, not_valid));
     announceData data9 = announceCheck(
             "announce listen 4222 seed [] leech [jzichfnt8SBnANS8AZNYsl8SN9kzox83h]");
-    assert(!announceStructCmp(data9, not_valid));
+    assert(announceStructCmp(data9, not_valid));
 
 
     free_announceData(&data);
@@ -112,9 +112,13 @@ void test_look() {
     assert(lookStructCmp(data2, expected_look_data2));
 
     // Not valid
-    lookData data3 = lookCheck("look [filesie>=\"9128\" filename=\"Alltab\"]");
+    lookData data3 = lookCheck("look [filesie=\"9128\" filename=m\"Alltab\"]");
     lookData not_valid = {.nb_criterions=0, .is_valid=0};
-    assert(!lookStructCmp(data3, not_valid));
+    assert(lookStructCmp(data3, not_valid));
+    lookData data4 = lookCheck("look [filesie\"9128\" filename=\"Alltab\"]");
+    assert(lookStructCmp(data4, not_valid));
+    lookData data5 = lookCheck("look [filesie>=\"9128\" filename=\"Alltab\"]");
+    assert(lookStructCmp(data5, not_valid));
 
     free_regex(look_regex());
     free_lookData(&data);
@@ -132,9 +136,9 @@ void test_getfile() {
     // Not valid
     getfileData not_valid = {.is_valid=0};
     getfileData data2 = getfileCheck("getfile jzicsfnt8SBA8NS8AZNY8SN9dkzo83h");
-    assert(!getfileStructCmp(data2, not_valid));
+    assert(getfileStructCmp(data2, not_valid));
     getfileData data3 = getfileCheck("getfile jzi784sfnt8SBA8NS8AZNY8SN9dkzo83h");
-    assert(!getfileStructCmp(data3, not_valid));
+    assert(getfileStructCmp(data3, not_valid));
     free_regex(comparison_regex());
     printf("\033[92mpassed\033[39m\n");
 }

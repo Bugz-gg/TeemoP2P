@@ -24,7 +24,8 @@ regex_t *announce_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^announce listen ([0-9]+) seed \\[([a-zA-Z0-9 ]*)\\]( leech \\[(( |[a-zA-Z0-9]{32})*)\\])?$";
+    //char *pattern = "^announce listen ([0-9]+) seed \\[([a-zA-Z0-9 ]*)\\]( leech \\[(( |[a-zA-Z0-9]{32})*)\\])?$";
+    char *pattern = "^announce listen ([0-9]+) seed \\[(([a-zA-Z0-9]+ [0-9]+ [0-9]+ [a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
     if (regcomp(regex, pattern, REG_EXTENDED)) {
         fprintf(stderr, "Failed to compile regular expression\n");
     }
@@ -100,15 +101,12 @@ void free_lookData(lookData *data) {
 
 // Function to check announce message
 announceData announceCheck(char *message) {
-    announceData announceStruct;
-    announceStruct.files = NULL;
-    announceStruct.is_valid = 0;
-    announceStruct.nb_files = 0;
-    announceStruct.nb_leech_keys = 0;
+    announceData announceStruct = {.port=0, .nb_files=0, .nb_leech_keys=0, .is_valid=0};
+
     regex_t *regex = announce_regex();
-    regmatch_t matches[5];
-    if (regexec(regex, message, 5, matches, 0)) {
-        fprintf(stderr, "Failed to match regular expression\n");
+    regmatch_t matches[6];
+    if (regexec(regex, message, 6, matches, 0)) {
+        fprintf(stderr, "Failed to match regular expression in %s\n", message);
         return announceStruct;
     }
 
@@ -141,10 +139,10 @@ announceData announceCheck(char *message) {
         } else if (remainder == 2) {
             files[index / 4].pieceSize = atoi(token);
         } else {
-            if (strlen(token) != 32) {
+            /*if (strlen(token) != 32) {
                 fprintf(stderr, "Wrong md5sum hash size for %s.\n", files[index / 4].name);
                 return announceStruct;
-            }
+            }*/
             for (int i = 0; i < 32; ++i) {
                 files[index / 4].key[i] = token[i];
             }
@@ -154,8 +152,9 @@ announceData announceCheck(char *message) {
         ++index;
     }
 
+    // leech
     int nb_leech_keys = 0;
-    char *leechData = strndup(message + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
+    char *leechData = strndup(message + matches[5].rm_so, matches[5].rm_eo - matches[5].rm_so);
     count = countDelim(leechData);
     char **leechKeys = malloc(count * sizeof(char *));
     token = strtok(leechData, DELIM);
@@ -183,14 +182,12 @@ announceData announceCheck(char *message) {
 
 // Function to check announce message
 lookData lookCheck(char *message) {
-    lookData lookStruct;
-    lookStruct.criterions = NULL;
-    lookStruct.is_valid = 0;
+    lookData lookStruct = {.is_valid=0, .nb_criterions=0, .criterions=NULL};
 
     regex_t *regex = look_regex();
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
-        fprintf(stderr, "Failed to match regular expression.\n");
+        fprintf(stderr, "Failed to match regular expression in %s\n", message);
         return lookStruct;
     }
 
@@ -288,13 +285,12 @@ lookData lookCheck(char *message) {
 }
 
 getfileData getfileCheck(char *message) {
-    getfileData getfileStruct;
-    getfileStruct.is_valid = 0;
+    getfileData getfileStruct = {.is_valid=0};
 
     regex_t *regex = getfile_regex();
     regmatch_t matches[2];
     if (regexec(regex, message, 2, matches, 0)) {
-        fprintf(stderr, "Failed to match regular expression.\n");
+        fprintf(stderr, "Failed to match regular expression in %s\n", message);
         return getfileStruct;
     }
     // Check if key in files.
@@ -314,8 +310,10 @@ int fileCmp(File f1, File f2) { // The equality of the peers having the file is 
 }
 
 int announceStructCmp(announceData a1, announceData a2) {
-    if (!a1.is_valid || !a2.is_valid || a1.port != a2.port || a1.nb_files != a2.nb_files || a1.nb_leech_keys != a2.nb_leech_keys)
+    if (a1.is_valid != a2.is_valid || a1.port != a2.port || a1.nb_files != a2.nb_files || a1.nb_leech_keys != a2.nb_leech_keys)
         return 0;
+    if (!a1.is_valid)
+        return 1;
 
     for (int i = 0; i < a1.nb_files; ++i) {
         if (!fileCmp(a1.files[i], a2.files[i]))
@@ -344,8 +342,10 @@ int criterionCmp(criterion c1, criterion c2) {
 }
 
 int lookStructCmp(lookData l1, lookData l2) {
-    if ((!l1.is_valid && !l2.is_valid) || l1.nb_criterions != l2.nb_criterions)
+    if ((l1.is_valid != l2.is_valid) || l1.nb_criterions != l2.nb_criterions)
         return 0;
+    if (!l1.is_valid)
+        return 1;
     for (int i = 0; i < l1.nb_criterions; ++i) {
         for (int j = 0; j < l1.nb_criterions; ++j) {
             if (criterionCmp(l1.criterions[i], l2.criterions[j]))
@@ -359,7 +359,9 @@ int lookStructCmp(lookData l1, lookData l2) {
 }
 
 int getfileStructCmp(getfileData gf1, getfileData gf2) {
-    return gf1.is_valid && gf2.is_valid && streq(gf1.key, gf2.key);
+    if (gf1.is_valid == gf2.is_valid && !gf1.is_valid)
+        return 1;
+    return streq(gf1.key, gf2.key);
 }
 
 void print_criterion(criterion crit) {

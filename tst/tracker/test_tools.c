@@ -123,6 +123,8 @@ void test_look() {
     free_regex(look_regex());
     free_lookData(&data);
     free_lookData(&data2);
+    free_lookData(&data3);
+    free_lookData(&data4);
 
     printf("\033[92mpassed\033[39m\n");
 }

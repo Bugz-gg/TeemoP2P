@@ -89,6 +89,7 @@ void free_announceData(announceData *data) {
     free(data->files);
     for (int i = 0; i < data->nb_leech_keys; ++i)
         free(data->leechKeys[i]);
+    free(data->leechKeys);
 }
 
 void free_lookData(lookData *data) {
@@ -172,8 +173,8 @@ announceData announceCheck(char *message) {
     announceStruct.nb_files = nbFiles;
     announceStruct.files = files;
     announceStruct.nb_leech_keys = nb_leech_keys;
-    announceStruct.is_valid = 1;
     announceStruct.leechKeys = leechKeys;
+    announceStruct.is_valid = 1;
 
     free(filesData);
 
@@ -193,15 +194,13 @@ lookData lookCheck(char *message) {
 
     char *criterions_str = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
     int count = countDelim(criterions_str);
-    //printf("%s\n", criterions_str);
-    count = count + (!count && matches[1].rm_eo - matches[1].rm_so);
+    count = count + (!count && (matches[1].rm_eo - matches[1].rm_so));
     if (!count) {
         fprintf(stderr, "No criteria found.\n");
         return lookStruct;
     }
     regex_t *comp_regex = comparison_regex();
     regmatch_t comparison_match[5];
-
 
     criterion *criterions = malloc(count * sizeof(criterion));
     char *token = strtok(criterions_str, DELIM);
@@ -310,7 +309,8 @@ int fileCmp(File f1, File f2) { // The equality of the peers having the file is 
 }
 
 int announceStructCmp(announceData a1, announceData a2) {
-    if (a1.is_valid != a2.is_valid || a1.port != a2.port || a1.nb_files != a2.nb_files || a1.nb_leech_keys != a2.nb_leech_keys)
+    if (a1.is_valid != a2.is_valid || a1.port != a2.port || a1.nb_files != a2.nb_files ||
+        a1.nb_leech_keys != a2.nb_leech_keys)
         return 0;
     if (!a1.is_valid)
         return 1;

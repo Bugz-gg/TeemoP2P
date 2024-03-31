@@ -1,12 +1,6 @@
 #include "tools.h"
 
 typedef struct{
-    char * addr_ip; 
-    int num_port;
-    int peer_id;
-}Peer;
-
-typedef struct{
     Peer * peers;
     File * files;
     int nb_files;

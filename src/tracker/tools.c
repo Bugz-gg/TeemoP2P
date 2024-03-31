@@ -27,7 +27,7 @@ regex_t *announce_regex() {
     //char *pattern = "^announce listen ([0-9]+) seed \\[([a-zA-Z0-9 ]*)\\]( leech \\[(( |[a-zA-Z0-9]{32})*)\\])?$";
     char *pattern = "^announce listen ([0-9]+) seed \\[(([a-zA-Z0-9]+ [0-9]+ [0-9]+ [a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
     if (regcomp(regex, pattern, REG_EXTENDED)) {
-        fprintf(stderr, "Failed to compile regular expression\n");
+        fprintf(stderr, "Failed to compile `announce` regular expression\n");
     }
     return regex;
 }
@@ -42,7 +42,7 @@ regex_t *look_regex() {
     if (ret) {
         char error_message[100];
         regerror(ret, regex, error_message, sizeof(error_message));
-        fprintf(stderr, "Failed to compile look regular expression. %s\n", error_message);
+        fprintf(stderr, "Failed to compile `look` regular expression. %s\n", error_message);
     }
     return regex;
 }
@@ -54,7 +54,7 @@ regex_t *comparison_regex() {
     regex = malloc(sizeof(regex_t));
     char *pattern = "^([a-z]+)((<|<=|!=|=|>|>=))\"([a-zA-Z0-9]*)\"$";
     if (regcomp(regex, pattern, REG_EXTENDED)) {
-        fprintf(stderr, "Failed to compile regular expression\n");
+        fprintf(stderr, "Failed to compile `comparison` regular expression\n");
     }
     return regex;
 }
@@ -69,7 +69,7 @@ regex_t *getfile_regex() {
     if (ret) {
         char error_message[100];
         regerror(ret, regex, error_message, sizeof(error_message));
-        fprintf(stderr, "Failed to compile look regular expression. %s\n", error_message);
+        fprintf(stderr, "Failed to compile `getfile` regular expression. %s\n", error_message);
     }
     return regex;
 }
@@ -107,7 +107,7 @@ announceData announceCheck(char *message) {
     regex_t *regex = announce_regex();
     regmatch_t matches[6];
     if (regexec(regex, message, 6, matches, 0)) {
-        fprintf(stderr, "Failed to match regular expression in %s\n", message);
+        fprintf(stderr, "(announce) Failed to match regular expression in %s\n", message);
         return announceStruct;
     }
 
@@ -122,7 +122,7 @@ announceData announceCheck(char *message) {
     int count = countDelim(filesData);
 
     if (count % 4) {
-        fprintf(stderr, "Wrong file data.\n");
+        fprintf(stderr, "Incorrect file data in %s.\n", filesData);
         return announceStruct;
     }
     int nbFiles = count / 4;
@@ -188,7 +188,7 @@ lookData lookCheck(char *message) {
     regex_t *regex = look_regex();
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
-        fprintf(stderr, "Failed to match regular expression in %s\n", message);
+        fprintf(stderr, "(look) Failed to match regular expression in %s\n", message);
         return lookStruct;
     }
 
@@ -196,7 +196,7 @@ lookData lookCheck(char *message) {
     int count = countDelim(criterions_str);
     count = count + (!count && (matches[1].rm_eo - matches[1].rm_so));
     if (!count) {
-        fprintf(stderr, "No criteria found.\n");
+        fprintf(stderr, "No criteria found in %s.\n", criterions_str);
         return lookStruct;
     }
     regex_t *comp_regex = comparison_regex();
@@ -216,7 +216,7 @@ lookData lookCheck(char *message) {
 
     while (token != NULL) {
         if (regexec(comp_regex, token, 5, comparison_match, 0)) {
-            fprintf(stderr, "Failed to match criterion expression.\n");
+            fprintf(stderr, "Failed to match criterion expression in %s.\n", token);
             return lookStruct;
         }
 
@@ -229,7 +229,7 @@ lookData lookCheck(char *message) {
         } else if (streq(criteria, "filesize")) {
             criterions[index].criteria = FILESIZE;
         } else {
-            fprintf(stderr, "Incorrect criteria.\n");
+            fprintf(stderr, "Incorrect criteria : %s.\n", criteria);
             return lookStruct;
         }
 
@@ -250,7 +250,7 @@ lookData lookCheck(char *message) {
         } else if (streq(criteria, "!=")) {
             criterions[index].op = DI;
         } else {
-            fprintf(stderr, "Incorrect operator.\n");
+            fprintf(stderr, "Incorrect operator : %s.\n", criteria);
             return lookStruct;
         }
         strncpy(value, token + comparison_match[4].rm_so, comparison_match[4].rm_eo - comparison_match[4].rm_so);
@@ -289,7 +289,7 @@ getfileData getfileCheck(char *message) {
     regex_t *regex = getfile_regex();
     regmatch_t matches[2];
     if (regexec(regex, message, 2, matches, 0)) {
-        fprintf(stderr, "Failed to match regular expression in %s\n", message);
+        fprintf(stderr, "(getfile) Failed to match regular expression in %s\n", message);
         return getfileStruct;
     }
     // Check if key in files.
@@ -301,7 +301,7 @@ getfileData getfileCheck(char *message) {
 }
 
 int peerCmp(Peer p1, Peer p2) {
-    return streq(p1.IP, p2.IP) && p1.port == p2.port;
+    return streq(p1.addr_ip, p2.addr_ip) && p1.num_port == p2.num_port;
 }
 
 int fileCmp(File f1, File f2) { // The equality of the peers having the file is not checked.

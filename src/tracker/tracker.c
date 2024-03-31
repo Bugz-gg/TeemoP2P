@@ -8,13 +8,15 @@
 void print_tracker_files(Tracker *t){
 
     for (int i=0;i<t->nb_files;i++){
-        
-        printf("Peer ID: %d\n", t->files[i].peer_id);
+
         printf("Filename: %s\n", t->files[i].name);
         printf("Size: %d\n", t->files[i].size);
         printf("Block Size: %d\n", t->files[i].pieceSize);
         printf("Key: %s\n", t->files[i].key);
-        printf("\n");
+        printf("Peers' ids :");
+        for (int j=0; i<t->files[i].nb_peers; ++j)
+            printf("%d ", t->files[i].peers[j].peer_id);
+        printf("\n\n");
 
     }
 }
@@ -145,8 +147,10 @@ Peer select_peer(Tracker *t ,int id){
             return t->peers[i];
         }
     }
+    Peer not_found = {.peer_id=-1, .addr_ip="", .num_port=-1};
+    return not_found;
 }
-
+/*
 Peer * getfile(Tracker *t ,char * k ){
     Peer * p=malloc(t->nb_peers * sizeof(Peer));
     int nb=0;
@@ -154,6 +158,17 @@ Peer * getfile(Tracker *t ,char * k ){
         if(streq(t->files[i].key,k)){
             int id=t->files[i].peer_id;
             p[nb]=select_peer(t,id);
+        }
+    }
+    return p;
+}*/
+
+
+Peer *getfile(Tracker *t ,char *k){
+    Peer *p=NULL;
+    for(int i=0; i<t->nb_files; ++i){
+        if(streq(t->files[i].key,k)){
+            return t->files[i].peers;
         }
     }
     return p;

@@ -27,6 +27,15 @@ bool check_message(char* message){
     lookData d=lookCheck(message);
     printLookData(d);
     return d.is_valid;*/
+    announceData aData = announceCheck(message);
+    if (aData.is_valid)
+        return true;
+    lookData lData = lookCheck(message);
+    if (lData.is_valid)
+        return true;
+    getfileData gfData = getfileCheck(message);
+    if (gfData.is_valid)
+        return true;
     return false;
 }
 

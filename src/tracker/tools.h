@@ -1,20 +1,28 @@
 #ifndef TOOLS_H
 #define TOOLS_H
+
 #include <regex.h>
 
 #define BITS_PER_INT 8*sizeof(int)
 #define DELIM " "
 #define PORT_MAX_LENGTH 5
 
-enum criterias {FILENAME, FILESIZE};
-enum operations {LT, LE, EQ, GE, GT, DI};
-enum types {INT, FLOAT, STR};
+enum criterias {
+    FILENAME, FILESIZE
+};
+enum operations {
+    LT, LE, EQ, GE, GT, DI
+};
+enum types {
+    INT, FLOAT, STR
+};
 
 // Define structures
 
 typedef struct {
-    char *IP;
-    int port;
+    char *addr_ip;
+    int num_port;
+    int peer_id;
 } Peer;
 
 typedef struct {
@@ -22,6 +30,7 @@ typedef struct {
     int size;
     int pieceSize;
     char key[33];
+    int nb_peers;
     Peer *peers;
 } File;
 
@@ -59,28 +68,45 @@ typedef struct {
 int streq(char *, char *);
 
 regex_t *announce_regex();
+
 regex_t *look_regex();
+
 regex_t *comparison_regex();
+
 regex_t *getfile_regex();
+
 announceData announceCheck(char *);
+
 lookData lookCheck(char *);
+
 getfileData getfileCheck(char *);
 
 int peerCmp(Peer, Peer);
+
 int announceStructCmp(announceData, announceData);
+
 int criterionCmp(criterion, criterion);
+
 int lookStructCmp(lookData, lookData);
+
 int getfileStructCmp(getfileData, getfileData);
 
 void printAnnounceData(announceData);
+
 void print_criterion(criterion);
+
 void printLookData(lookData);
+
 void printGetFileData(getfileData);
 
 void free_announceData(announceData *);
+
 void free_regex(regex_t *);
+
 void free_file(File *);
+
 void free_announceData(announceData *);
+
 void free_lookData(lookData *);
 
 

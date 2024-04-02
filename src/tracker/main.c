@@ -79,7 +79,7 @@ void handle_client_connection(void* newsockfd_void_ptr) {
             error_count = 0;
         }
         printf("Here is the message: %s\n", buffer);
-        n = write(newsockfd, "I got your message", 18);
+        n = write(newsockfd, "I got your message\n", 18);
         if (n < 0) {
             error("ERROR writing to socket");
             break; 

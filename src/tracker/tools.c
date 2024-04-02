@@ -122,6 +122,7 @@ announceData announceCheck(char *message) {
     int count = countDelim(filesData);
 
     if (count % 4) {
+        free(filesData);
         fprintf(stderr, "Incorrect file data in %s.\n", filesData);
         return announceStruct;
     }
@@ -176,6 +177,7 @@ announceData announceCheck(char *message) {
     announceStruct.leechKeys = leechKeys;
     announceStruct.is_valid = 1;
 
+    free(leechData);
     free(filesData);
 
     return announceStruct;
@@ -196,6 +198,7 @@ lookData lookCheck(char *message) {
     int count = countDelim(criterions_str);
     count = count + (!count && (matches[1].rm_eo - matches[1].rm_so));
     if (!count) {
+        free(criterions_str);
         fprintf(stderr, "No criteria found in %s.\n", criterions_str);
         return lookStruct;
     }
@@ -216,6 +219,7 @@ lookData lookCheck(char *message) {
 
     while (token != NULL) {
         if (regexec(comp_regex, token, 5, comparison_match, 0)) {
+            free(criterions);
             fprintf(stderr, "Failed to match criterion expression in %s.\n", token);
             return lookStruct;
         }
@@ -278,7 +282,6 @@ lookData lookCheck(char *message) {
     lookStruct.nb_criterions = count;
     lookStruct.criterions = criterions;
     lookStruct.is_valid = 1;
-    free(criterions_str);
 
     return lookStruct;
 }

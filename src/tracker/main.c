@@ -7,11 +7,25 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdbool.h>
+#include "signal.h"
 #include "thpool.h" 
 #include "tools.h"
+#include "tracker.h"
 #ifndef NB_THREADS
 #define NB_THREADS 2
 #endif
+
+static threadpool thpool;
+static sig_t old_handler;
+static int sockfd;
+
+void close_on_exit(int signo) {
+    thpool_destroy(thpool);
+    signal(SIGINT, old_handler);
+    close(sockfd);
+    free_all_regex();
+    free_on_exit(signo);
+}
 
 void error(char *msg) {
     perror(msg);
@@ -28,14 +42,24 @@ bool check_message(char* message){
     printLookData(d);
     return d.is_valid;*/
     announceData aData = announceCheck(message);
-    if (aData.is_valid)
+    if (aData.is_valid) {
+        // Handle data
+        free_announceData(&aData);
         return true;
+    }
+    free_announceData(&aData);
     lookData lData = lookCheck(message);
-    if (lData.is_valid)
+    if (lData.is_valid) {
+        // Handle data
+        free_lookData(&lData);
         return true;
+    }
+    free_lookData(&lData);
     getfileData gfData = getfileCheck(message);
-    if (gfData.is_valid)
+    if (gfData.is_valid) {
+        // Handle data
         return true;
+    }
     return false;
 }
 
@@ -79,7 +103,7 @@ void handle_client_connection(void* newsockfd_void_ptr) {
             error_count = 0;
         }
         printf("Here is the message: %s\n", buffer);
-        n = write(newsockfd, "I got your message\n", 18);
+        n = write(newsockfd, "I got your message\n\n", 18);
         if (n < 0) {
             error("ERROR writing to socket");
             break; 
@@ -87,9 +111,13 @@ void handle_client_connection(void* newsockfd_void_ptr) {
 }}
 
 int main(int argc, char *argv[]) {
+    (void)tracker; // To remove Unused variable warning
+    old_handler = signal(SIGINT, close_on_exit);
     int sockfd, newsockfd, portno;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
+
+    init_tracker();
 
     if (argc < 2) {
         fprintf(stderr,"ERROR, no port provided\n");
@@ -97,7 +125,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Initialiser le pool de threads
-    threadpool thpool = thpool_init(NB_THREADS);
+    thpool = thpool_init(NB_THREADS);
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
@@ -110,10 +138,10 @@ int main(int argc, char *argv[]) {
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
         error("ERROR on binding");
-    
+
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
-    
+    printf("\033[92mReady\033[39m\n");
     while (1) {
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         if (newsockfd < 0)

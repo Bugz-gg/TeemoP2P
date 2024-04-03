@@ -74,9 +74,24 @@ regex_t *getfile_regex() {
     return regex;
 }
 
+void free_peer(Peer *peer) {
+    free(peer->addr_ip);
+}
+
 void free_regex(regex_t *regex) {
     regfree(regex);
     free(regex);
+}
+
+void free_all_regex() {
+    regex_t *announce = announce_regex();
+    free_regex(announce);
+    regex_t *look = look_regex();
+    free_regex(look);
+    regex_t *getfile = getfile_regex();
+    free_regex(getfile);
+    regex_t *comparison = comparison_regex();
+    free_regex(comparison);
 }
 
 void free_file(File *file) {
@@ -233,6 +248,8 @@ lookData lookCheck(char *message) {
         } else if (streq(criteria, "filesize")) {
             criterions[index].criteria = FILESIZE;
         } else {
+            free(criterions);
+            free(criterions_str);
             fprintf(stderr, "Incorrect criteria : %s.\n", criteria);
             return lookStruct;
         }
@@ -254,6 +271,8 @@ lookData lookCheck(char *message) {
         } else if (streq(criteria, "!=")) {
             criterions[index].op = DI;
         } else {
+            free(criterions);
+            free(criterions_str);
             fprintf(stderr, "Incorrect operator : %s.\n", criteria);
             return lookStruct;
         }
@@ -278,6 +297,7 @@ lookData lookCheck(char *message) {
         token = strtok(NULL, DELIM);
         ++index;
     }
+    free(criterions_str);
 
     lookStruct.nb_criterions = count;
     lookStruct.criterions = criterions;

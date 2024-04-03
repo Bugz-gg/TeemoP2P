@@ -173,3 +173,18 @@ Peer *getfile(Tracker *t ,char *k){
     }
     return p;
 }
+
+void free_on_exit(int signo) {
+    (void)signo;
+    for (int i=0; i<tracker.nb_peers; ++i)
+        free_peer(&tracker.peers[i]);
+    for (int i=0; i<tracker.nb_files; ++i)
+        free_file(&tracker.files[i]);
+    exit(0);
+    return;
+}
+
+void init_tracker() {
+    tracker.nb_peers = 0;
+    tracker.nb_files = 0;
+}

@@ -99,9 +99,13 @@ void printLookData(lookData);
 
 void printGetFileData(getfileData);
 
+void free_peer(Peer *);
+
 void free_announceData(announceData *);
 
 void free_regex(regex_t *);
+
+void free_all_regex();
 
 void free_file(File *);
 

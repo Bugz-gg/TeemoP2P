@@ -137,8 +137,8 @@ announceData announceCheck(char *message) {
     int count = countDelim(filesData);
 
     if (count % 4) {
-        free(filesData);
         fprintf(stderr, "Incorrect file data in %s.\n", filesData);
+        free(filesData);
         return announceStruct;
     }
     int nbFiles = count / 4;
@@ -213,8 +213,8 @@ lookData lookCheck(char *message) {
     int count = countDelim(criterions_str);
     count = count + (!count && (matches[1].rm_eo - matches[1].rm_so));
     if (!count) {
-        free(criterions_str);
         fprintf(stderr, "No criteria found in %s.\n", criterions_str);
+        free(criterions_str);
         return lookStruct;
     }
     regex_t *comp_regex = comparison_regex();
@@ -234,8 +234,8 @@ lookData lookCheck(char *message) {
 
     while (token != NULL) {
         if (regexec(comp_regex, token, 5, comparison_match, 0)) {
-            free(criterions);
             fprintf(stderr, "Failed to match criterion expression in %s.\n", token);
+            free(criterions);
             return lookStruct;
         }
 
@@ -248,9 +248,9 @@ lookData lookCheck(char *message) {
         } else if (streq(criteria, "filesize")) {
             criterions[index].criteria = FILESIZE;
         } else {
+            fprintf(stderr, "Incorrect criteria : %s.\n", criteria);
             free(criterions);
             free(criterions_str);
-            fprintf(stderr, "Incorrect criteria : %s.\n", criteria);
             return lookStruct;
         }
 

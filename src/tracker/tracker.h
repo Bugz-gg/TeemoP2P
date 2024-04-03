@@ -3,9 +3,11 @@
 
 static Tracker tracker;
 
-int new_id(Tracker * t , char * addr_ip);
+int new_id(Tracker *, char *);
 
-void announce( Tracker * t , char* message , char * addr_ip);
+void announce(Tracker *, announceData, char *);
+
+void look(Tracker *, lookData);
 
 void free_on_exit(int);
 

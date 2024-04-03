@@ -34,8 +34,7 @@ int new_id(Tracker * t , char * addr_ip){
     return new_id +1;
 }
 
-void announce( Tracker * t , char* message , char * addr_ip){
-    announceData d=announceCheck(message);
+void announce( Tracker * t , announceData d, char * addr_ip){
     int nb_new_files=d.nb_files;
     for(int i=0;i<nb_new_files;i++){
         t->files[t->nb_files+i]=d.files[i];
@@ -131,14 +130,14 @@ void select_files(File * f ,int nb, criterion c ){
     }
 }
 
-File * look(Tracker *t , char * message){
+void look(Tracker *t , lookData data){
     File * files=t->files;;
-    criterion * l=lookCheck(message).criterions;
-    unsigned int nb=lookCheck(message).nb_criterions;
+    criterion * l=data.criterions;
+    unsigned int nb=data.nb_criterions;
     for(int i=0;i<nb;i++){
         select_files(files,t->nb_files,l[i]);    
     }
-    return files;
+    return;
 }
 
 Peer select_peer(Tracker *t ,int id){

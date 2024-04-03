@@ -32,7 +32,7 @@ void error(char *msg) {
     exit(1);
 }
 
-bool handle_message(char* message, Tracker *tracker){
+bool handle_message(char* message, Tracker *tracker, char *addr_ip){
     /* segmentation fault s
     announceData d= announceCheck(message);
     printAnnounceData(d);
@@ -43,14 +43,14 @@ bool handle_message(char* message, Tracker *tracker){
     return d.is_valid;*/
     announceData aData = announceCheck(message);
     if (aData.is_valid) {
-        // Handle data
+        announce(tracker, aData, addr_ip);
         free_announceData(&aData);
         return true;
     }
     free_announceData(&aData);
     lookData lData = lookCheck(message);
     if (lData.is_valid) {
-        // Handle data
+        look(tracker, lData);
         free_lookData(&lData);
         return true;
     }
@@ -95,7 +95,7 @@ void handle_client_connection(void* newsockfd_void_ptr) {
             break;
         }
         // Vérifie si le message est bien formaté
-        int is_formatted_correctly = handle_message(buffer, &tracker);
+        int is_formatted_correctly = handle_message(buffer, &tracker, NULL); // Replace NULL by addr_ip
         if (!is_formatted_correctly) {
             // Message mal formaté
             error_count++;

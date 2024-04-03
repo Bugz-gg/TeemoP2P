@@ -16,10 +16,10 @@ regex_t *comparison_regex();
 regex_t *getfile_regex();
 regex_t *update_regex();
 
-announceData announceCheck(char *, Tracker *);
-lookData lookCheck(char *, Tracker *);
-getfileData getfileCheck(char *, Tracker *);
-updateData updateCheck(char *, Tracker *);
+announceData announceCheck(char *);
+lookData lookCheck(char *);
+getfileData getfileCheck(char *);
+updateData updateCheck(char *);
 
 int peerCmp(Peer, Peer);
 int announceStructCmp(announceData, announceData);

@@ -142,7 +142,7 @@ void free_updateData(updateData *data) {
 }
 
 // Function to check announce message
-announceData announceCheck(char *message, Tracker *tracker) {
+announceData announceCheck(char *message) {
     announceData announceStruct = {.port=0, .nb_files=0, .nb_leech_keys=0, .is_valid=0};
 
     regex_t *regex = announce_regex();
@@ -225,7 +225,7 @@ announceData announceCheck(char *message, Tracker *tracker) {
 }
 
 // Function to check announce message
-lookData lookCheck(char *message, Tracker *tracker) {
+lookData lookCheck(char *message) {
     lookData lookStruct = {.is_valid=0, .nb_criterions=0, .criterions=NULL};
 
     regex_t *regex = look_regex();
@@ -332,7 +332,7 @@ lookData lookCheck(char *message, Tracker *tracker) {
     return lookStruct;
 }
 
-getfileData getfileCheck(char *message, Tracker *tracker) {
+getfileData getfileCheck(char *message) {
     getfileData getfileStruct = {.is_valid=0};
 
     regex_t *regex = getfile_regex();
@@ -349,7 +349,7 @@ getfileData getfileCheck(char *message, Tracker *tracker) {
     return getfileStruct;
 }
 
-updateData updateCheck(char *message, Tracker *tracker) {
+updateData updateCheck(char *message) {
     updateData updateStruct = {.is_valid=0};
 
     regex_t *regex = update_regex();

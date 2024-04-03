@@ -41,26 +41,26 @@ bool handle_message(char* message, Tracker *tracker){
     lookData d=lookCheck(message);
     printLookData(d);
     return d.is_valid;*/
-    announceData aData = announceCheck(message, tracker);
+    announceData aData = announceCheck(message);
     if (aData.is_valid) {
         // Handle data
         free_announceData(&aData);
         return true;
     }
     free_announceData(&aData);
-    lookData lData = lookCheck(message, tracker);
+    lookData lData = lookCheck(message);
     if (lData.is_valid) {
         // Handle data
         free_lookData(&lData);
         return true;
     }
     free_lookData(&lData);
-    getfileData gfData = getfileCheck(message, tracker);
+    getfileData gfData = getfileCheck(message);
     if (gfData.is_valid) {
         // Handle data
         return true;
     }
-    updateData uData = updateCheck(message, tracker);
+    updateData uData = updateCheck(message);
     if (uData.is_valid) {
         // Handle data
         free_updateData(&uData);

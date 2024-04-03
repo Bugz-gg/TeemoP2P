@@ -60,6 +60,13 @@ bool check_message(char* message){
         // Handle data
         return true;
     }
+    updateData uData = updateCheck(message);
+    if (uData.is_valid) {
+        // Handle data
+        free_updateData(&uData);
+        return true;
+    }
+    free_updateData(&uData);
     return false;
 }
 
@@ -94,7 +101,7 @@ void handle_client_connection(void* newsockfd_void_ptr) {
             error_count++;
             if (error_count >= 3) {
                 // Trois erreurs de suite, fermer la connexion
-                printf("Message mal formaté détecté 3 fois, fermeture de la connexion.\n");
+                printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion.\033[39m\n");
                 close(newsockfd);
                 break;
             }

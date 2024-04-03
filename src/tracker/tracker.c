@@ -35,7 +35,7 @@ int new_id(Tracker * t , char * addr_ip){
 }
 
 void announce( Tracker * t , char* message , char * addr_ip){
-    announceData d=announceCheck(message);
+    announceData d=announceCheck(message, t);
     int nb_new_files=d.nb_files;
     for(int i=0;i<nb_new_files;i++){
         t->files[t->nb_files+i]=d.files[i];
@@ -133,8 +133,8 @@ void select_files(File * f ,int nb, criterion c ){
 
 File * look(Tracker *t , char * message){
     File * files=t->files;;
-    criterion * l=lookCheck(message).criterions;
-    unsigned int nb=lookCheck(message).nb_criterions;
+    criterion * l=lookCheck(message, t).criterions;
+    unsigned int nb=lookCheck(message, t).nb_criterions;
     for(int i=0;i<nb;i++){
         select_files(files,t->nb_files,l[i]);    
     }

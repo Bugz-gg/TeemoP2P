@@ -32,7 +32,7 @@ void error(char *msg) {
     exit(1);
 }
 
-bool check_message(char* message){
+bool handle_message(char* message, Tracker *tracker){
     /* segmentation fault s
     announceData d= announceCheck(message);
     printAnnounceData(d);
@@ -41,26 +41,26 @@ bool check_message(char* message){
     lookData d=lookCheck(message);
     printLookData(d);
     return d.is_valid;*/
-    announceData aData = announceCheck(message);
+    announceData aData = announceCheck(message, tracker);
     if (aData.is_valid) {
         // Handle data
         free_announceData(&aData);
         return true;
     }
     free_announceData(&aData);
-    lookData lData = lookCheck(message);
+    lookData lData = lookCheck(message, tracker);
     if (lData.is_valid) {
         // Handle data
         free_lookData(&lData);
         return true;
     }
     free_lookData(&lData);
-    getfileData gfData = getfileCheck(message);
+    getfileData gfData = getfileCheck(message, tracker);
     if (gfData.is_valid) {
         // Handle data
         return true;
     }
-    updateData uData = updateCheck(message);
+    updateData uData = updateCheck(message, tracker);
     if (uData.is_valid) {
         // Handle data
         free_updateData(&uData);
@@ -95,7 +95,7 @@ void handle_client_connection(void* newsockfd_void_ptr) {
             break;
         }
         // Vérifie si le message est bien formaté
-        int is_formatted_correctly = check_message(buffer);
+        int is_formatted_correctly = handle_message(buffer, &tracker);
         if (!is_formatted_correctly) {
             // Message mal formaté
             error_count++;
@@ -110,7 +110,7 @@ void handle_client_connection(void* newsockfd_void_ptr) {
             error_count = 0;
         }
         printf("Here is the message: %s\n", buffer);
-        n = write(newsockfd, "I got your message\n\n", 18);
+        n = write(newsockfd, "I got your message\n", 19);
         if (n < 0) {
             error("ERROR writing to socket");
             break; 

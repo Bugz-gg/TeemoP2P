@@ -1,11 +1,5 @@
 #include "tools.h"
-
-typedef struct{
-    Peer * peers;
-    File * files;
-    int nb_files;
-    int nb_peers;
-}Tracker;
+#include "structs.h"
 
 static Tracker tracker;
 

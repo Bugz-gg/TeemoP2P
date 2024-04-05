@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,6 +15,7 @@
 #ifndef NB_THREADS
 #define NB_THREADS 2
 #endif
+#define MAX_PEERS 2000
 
 static threadpool thpool;
 static sig_t old_handler;
@@ -120,6 +122,11 @@ void handle_client_connection(void* newsockfd_void_ptr) {
 int main(int argc, char *argv[]) {
     (void)tracker; // To remove Unused variable warning
     old_handler = signal(SIGINT, close_on_exit);
+    int client_socket[MAX_PEERS];
+    for (int i = 0; i <MAX_PEERS; i++)   
+    {   
+        client_socket[i] = 0;   
+    } 
     int sockfd, newsockfd, portno;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -135,10 +142,17 @@ int main(int argc, char *argv[]) {
     thpool = thpool_init(NB_THREADS);
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
     if (sockfd < 0) 
         error("ERROR opening socket");
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
     portno = atoi(argv[1]);
+    if( setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,  
+          sizeof(opt)) < 0 )   
+    {   
+        perror("setsockopt");   
+        exit(EXIT_FAILURE);   
+    }   
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;

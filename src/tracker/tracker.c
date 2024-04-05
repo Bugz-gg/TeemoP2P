@@ -4,6 +4,15 @@
 #include <string.h>
 #include "tools.h"
 #include "tracker.h"
+#define MAX_FILES 100
+#define MAX_PEERS 200
+
+void init_tracker(Tracker *t){
+    t->nb_files=0;
+    t->nb_peers=0;
+    t->files=malloc(MAX_FILES*sizeof(File));
+    t->peers=malloc(MAX_PEERS*sizeof(Peer));
+}
 
 void print_tracker_files(Tracker *t){
 
@@ -36,7 +45,11 @@ int new_id(Tracker * t , char * addr_ip){
 
 void announce( Tracker * t , announceData d, char * addr_ip){
     int nb_new_files=d.nb_files;
+    if(t->nb_files +nb_new_files>MAX_FILES){
+        t->files=realloc(t->files,(nb_new_files + t->nb_files)*sizeof(File));
+    }
     for(int i=0;i<nb_new_files;i++){
+        
         t->files[t->nb_files+i]=d.files[i];
     }
     t->nb_files+=nb_new_files;

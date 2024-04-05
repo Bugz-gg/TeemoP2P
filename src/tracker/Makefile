@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c11 -Wall -Werror -g
+CFLAGS = -Wall -Werror -g
 LDFLAGS = -lpthread
 OBJ = main.o thpool.o tools.o tracker.o
 DEPS = thpool.h tools.h tracker.h

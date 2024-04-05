@@ -43,7 +43,7 @@ int new_id(Tracker * t , char * addr_ip){
     return new_id +1;
 }
 
-void announce( Tracker * t , announceData d, char * addr_ip){
+char *announce( Tracker * t , announceData d, char * addr_ip){
     int nb_new_files=d.nb_files;
     if(t->nb_files +nb_new_files>MAX_FILES){
         t->files=realloc(t->files,(nb_new_files + t->nb_files)*sizeof(File));
@@ -57,7 +57,7 @@ void announce( Tracker * t , announceData d, char * addr_ip){
     t->peers[t->nb_peers].peer_id = new_id(t,addr_ip) ;
     t->peers[t->nb_peers].addr_ip=addr_ip;
     t->nb_peers+=1;
-    printf("OK\n");
+    return strndup("OK", 3);
 }
 
 void remove_file(File * fs , File f ,int* nb){
@@ -143,14 +143,15 @@ void select_files(File * f ,int nb, criterion c ){
     }
 }
 
-void look(Tracker *t , lookData data){
+char *look(Tracker *t , lookData data){
     File * files=t->files;;
     criterion * l=data.criterions;
     unsigned int nb=data.nb_criterions;
     for(int i=0;i<nb;i++){
         select_files(files,t->nb_files,l[i]);    
     }
-    return;
+    char *response = strndup("", 1); // To be changed.
+    return response;
 }
 
 Peer select_peer(Tracker *t ,int id){
@@ -194,9 +195,4 @@ void free_on_exit(int signo) {
         free_file(&tracker.files[i]);
     exit(0);
     return;
-}
-
-void init_tracker() {
-    tracker.nb_peers = 0;
-    tracker.nb_files = 0;
 }

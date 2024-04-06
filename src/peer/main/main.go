@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	peer "peerproject/pair"
-	"peerproject/tools"
 	"strings"
 	"time"
 )
@@ -50,36 +49,42 @@ func inputProg() {
 	for {
 		fmt.Print("Enter a command : ")
 		command := readInput()
-		switch command[0] {
-		case "launch a peer", "lp":
-			fmt.Print("Got it, Give me his IP & Port : ")
-			input := readInput()
-			if len(input) >= 2 {
-				MyPeer = peer.StartPeer(input[0], input[1], "online", make([]tools.File, 0))
-			} else {
-				fmt.Println("Missing a field.")
-			}
-		case "connect":
-			if !MyPeer.IsEmpty() {
-				fmt.Print("Enter the IP and port of peer you want to connect to: ")
+		if len(command) <= 0 {
+			continue
+		} else {
+			switch command[0] {
+			case "launch a peer", "lp":
+				fmt.Print("Got it, Give me his IP & Port : ")
 				input := readInput()
-				if len(input) == 2 {
-					MyPeer.ConnectTo(input[0], input[1])
+				if len(input) == 0 {
+					MyPeer = peer.StartPeer("localhost", "3000", "online")
+				} else if len(input) >= 2 {
+					MyPeer = peer.StartPeer(input[0], input[1], "online")
 				} else {
-					fmt.Println("Invalid input.")
+					fmt.Println("Missing a field.")
 				}
-			} else {
-				fmt.Println("You need to launch a peer first.")
+			case "connect":
+				if !MyPeer.IsEmpty() {
+					fmt.Print("Enter the IP and port of peer you want to connect to: ")
+					input := readInput()
+					if len(input) == 2 {
+						MyPeer.ConnectTo(input[0], input[1])
+					} else {
+						fmt.Println("Invalid input.")
+					}
+				} else {
+					fmt.Println("You need to launch a peer first.")
+				}
+			case "handle":
+				handlePeer(&MyPeer, "handle")
+			case "close":
+				handlePeer(&MyPeer, "close")
+			case "exit":
+				fmt.Println("Ending the program :(")
+				os.Exit(1)
+			default:
+				fmt.Println("Command not found here the list: lp (launch a peer), handle, close, exit")
 			}
-		case "handle":
-			handlePeer(&MyPeer, "handle")
-		case "close":
-			handlePeer(&MyPeer, "close")
-		case "exit":
-			fmt.Println("Ending the program :(")
-			os.Exit(1)
-		default:
-			fmt.Println("Command not found here the list: lp (launch a peer), handle, close, exit")
 		}
 	}
 }

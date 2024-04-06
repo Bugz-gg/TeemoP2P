@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"peerproject/tools"
+	"strings"
+	// "peerproject/tools"
 )
 
 func (p *Peer) HelloTrack(t Peer) {
-	message := "annonce listen " + p.Port + " seed ["
+	message := "announce listen " + p.Port + " seed ["
 	for _, valeur := range p.Files {
 		name, size, pieceSize, key, isEmpty := valeur.GetFile()
 		if isEmpty {
-			message += fmt.Sprintf(`Name: %s, Size: %d, PieceSize: %d, Key: %s`, name, size, pieceSize, key)
+			message += fmt.Sprintf(`%s %d %d %s `, name, size, pieceSize, key)
 		} else {
 			break
 		}
 	}
+	message = strings.TrimSuffix(message, " ")
 	message += "]\n"
 	conn, err := net.Dial("tcp", t.IP+":"+t.Port)
 	errorCheck(err)
@@ -44,9 +48,26 @@ func WriteReadConnection(conn net.Conn) {
 	conn.Write([]byte(message))
 
 	buffer := make([]byte, 256)
-	_, nerr := conn.Read(buffer)
+	fd, nerr := conn.Read(buffer)
 	errorCheck(nerr)
+	if fd > 0 {
+		mess := string(buffer)
+		switch mess {
+		case "data", "data\n":
+			_, _ = tools.DataCheck(mess)
+		case "have", "have\n":
+			_, _ = tools.HaveCheck(mess)
+		case "ok", "ok\n":
+			fmt.Println("> ", mess)
+		case "list", "list\n":
+			_, _ = tools.ListCheck(mess)
+		case "peers", "peers\n":
+			_, _ = tools.PeersCheck(mess)
+		default:
+			panic("valeur par default et pas parmi la liste")
 
+		}
+	}
 }
 
 func (p *Peer) ConnectTo(IP string, Port string) {

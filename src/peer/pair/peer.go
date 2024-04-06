@@ -1,12 +1,11 @@
 package peer_package
 
 import (
-	"bufio"
 	"fmt"
 	"net"
-	"os"
-	"strings"
 	"time"
+
+	"gopkg.in/ini.v1"
 
 	tools "peerproject/tools"
 )
@@ -35,41 +34,25 @@ func errorCheck(err error) {
 }
 
 func GetConfig() Peer {
-	file, err := os.Open("./config.ini")
+	file, err := ini.Load("config.ini")
 	errorCheck(err)
 	var track Peer
 
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, "=", 2)
-
-		if len(parts) == 2 {
-			key := strings.TrimSpace(parts[0])
-			value := strings.TrimSpace(parts[1])
-
-			switch key {
-			case "tracker-address":
-				track.IP = value
-			case "tracker-port":
-				track.Port = value
-			}
-		}
-	}
+	section := file.Section("Tracker")
+	track.IP = section.Key("ip").String()
+	track.Port = section.Key("port").String()
 	track.Status = "online"
 	track.Type = "tracker"
 	return track
 }
 
-func StartPeer(IP string, Port string, Type string, Files []tools.File) Peer {
+func StartPeer(IP string, Port string, Type string) Peer {
 	track := GetConfig()
 	peer := Peer{
 		IP:    IP,
 		Port:  Port,
 		Type:  Type,
-		Files: Files,
+		Files: tools.FillStructFromConfig(),
 		Comm:  make(map[string]net.Conn),
 	}
 	go peer.startListening()

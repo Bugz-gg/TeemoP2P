@@ -43,5 +43,4 @@ void free_announceData(announceData *);
 void free_lookData(lookData *);
 void free_updateData(updateData *);
 
-
 #endif //TOOLS_H

@@ -90,7 +90,7 @@ regex_t *update_regex() {
 }
 
 void free_peer(Peer *peer) {
-    free(peer->addr_ip);
+    ; //free(peer->addr_ip);
 }
 
 void free_regex(regex_t *regex) {
@@ -112,7 +112,7 @@ void free_all_regex() {
 }
 
 void free_file(File *file) {
-    free(file->name);
+    ; //free(file->name);
 }
 
 void free_announceData(announceData *data) {
@@ -176,7 +176,12 @@ announceData announceCheck(char *message) {
     while (token != NULL) {
         remainder = index % 4;
         if (!remainder) {
-            files[index / 4].name = strndup(token, strlen(token));
+            char curr_char = *token;
+            int filled = 0;
+            while (curr_char) {
+                files[index / 4].name[filled++] = curr_char++;
+            }
+            files[index / 4].name[filled] = '\0';
         } else if (remainder == 1) {
             files[index / 4].size = atoi(token);
         } else if (remainder == 2) {
@@ -318,6 +323,14 @@ lookData lookCheck(char *message) {
                 criterions[index].value.value_str = strndup(value,
                                                             comparison_match[4].rm_eo - comparison_match[4].rm_so);
             }
+        }
+
+        // Check is the type is coherent with the criteria
+        if (criterions[index].criteria == FILENAME && criterions[index].value_type != STR) {
+            free(criterions);
+            free(criterions_str);
+            fprintf(stderr, "Incorrect value type for filesize : %s.\n", value);
+            return lookStruct;
         }
 
         token = strtok(NULL, DELIM);
@@ -577,5 +590,4 @@ void printUpdateData(updateData data) {
         printf("updateData is not valid.\n");
     }
 }
-
 

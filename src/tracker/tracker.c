@@ -4,66 +4,105 @@
 #include <string.h>
 #include "tools.h"
 #include "tracker.h"
+
 #define MAX_FILES 100
 #define MAX_PEERS 200
 
-void init_tracker(Tracker *t){
-    t->nb_files=0;
-    t->nb_peers=0;
-    t->files=malloc(MAX_FILES*sizeof(File));
-    t->peers=malloc(MAX_PEERS*sizeof(Peer));
+char tmp_buffer[200]; // Used to send messages back.
+
+void init_tracker(Tracker *t) {
+    t->nb_files = 0;
+    t->nb_peers = 0;
+    t->files = malloc(MAX_FILES * sizeof(File));
+    t->peers = malloc(MAX_PEERS * sizeof(Peer));
 }
 
-void print_tracker_files(Tracker *t){
+void print_tracker_files(Tracker *t) {
 
-    for (int i=0;i<t->nb_files;i++){
+    for (int i = 0; i < t->nb_files; i++) {
 
-        printf("Filename: %s\n", t->files[i].name);
-        printf("Size: %d\n", t->files[i].size);
-        printf("Block Size: %d\n", t->files[i].pieceSize);
-        printf("Key: %s\n", t->files[i].key);
+        printf("Filename: %s\n", t->files[i]->name);
+        printf("Size: %d\n", t->files[i]->size);
+        printf("Block Size: %d\n", t->files[i]->pieceSize);
+        printf("Key: %s\n", t->files[i]->key);
         printf("Peers' ids :");
-        for (int j=0; i<t->files[i].nb_peers; ++j)
-            printf("%d ", t->files[i].peers[j].peer_id);
+        for (int j = 0; i < t->files[i]->nb_peers; ++j)
+            printf("%d ", t->files[i]->peers[j].peer_id);
         printf("\n\n");
 
     }
 }
 
-int new_id(Tracker * t , char * addr_ip){
-    static int new_id=0;
-    for (int i=0;i<t->nb_peers;i++){
-        if(streq(t->peers[i].addr_ip , addr_ip))
+int new_id(Tracker *t, char *addr_ip) {
+    static int new_id = 0;
+    for (int i = 0; i < t->nb_peers; i++) {
+        if (streq(t->peers[i].addr_ip, addr_ip))
             return t->peers[i].peer_id;
-        else{
-            if(new_id<t->peers[i].peer_id)
-                new_id=t->peers[i].peer_id;
+        else {
+            if (new_id < t->peers[i].peer_id)
+                new_id = t->peers[i].peer_id;
         }
     }
-    return new_id +1;
+    return new_id + 1;
 }
 
-char *announce( Tracker * t , announceData d, char * addr_ip){
-    int nb_new_files=d.nb_files;
-    if(t->nb_files +nb_new_files>MAX_FILES){
-        t->files=realloc(t->files,(nb_new_files + t->nb_files)*sizeof(File));
+void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) { // TODO Check if file already exists and add peer to it.
+    int nb_new_files = d->nb_files;
+    int changed = 0;
+    if (t->nb_peers+1>t->alloc_peers) {
+        t->alloc_peers *= 2;
+        changed = 1;
     }
-    for(int i=0;i<nb_new_files;i++){
-        
-        t->files[t->nb_files+i]=d.files[i];
+    if (changed)
+        t->peers = realloc(t->peers, (t->alloc_peers) * sizeof(Peer));
+    t->peers[t->nb_peers].num_port = d->port;
+    t->peers[t->nb_peers].peer_id = new_id(t, addr_ip);
+    int filled = 0;
+    while (*addr_ip)
+        t->peers[t->nb_peers].addr_ip[filled++] = *addr_ip++;
+    t->nb_peers++;
+
+    changed = 0;
+    while (t->nb_files + nb_new_files > t->alloc_files) {
+        t->alloc_files *= 2;
+        changed = 1;
     }
-    t->nb_files+=nb_new_files;
-    t->peers[t->nb_peers].num_port=d.port;
-    t->peers[t->nb_peers].peer_id = new_id(t,addr_ip) ;
-    t->peers[t->nb_peers].addr_ip=addr_ip;
-    t->nb_peers+=1;
-    return strndup("OK", 3);
+    if (changed)
+        t->files = realloc(t->files, (t->alloc_files) * sizeof(void *));
+
+    for (int i = 0; i < nb_new_files; ++i) {
+        t->files[t->nb_files + i] = &d->files[i];
+    }
+    t->nb_files += nb_new_files;
+
+    write(socket_fd, "OK\n", 3);
 }
 
-void remove_file(File * fs , File f ,int* nb){
+void look(Tracker *t, lookData *data, int socket_fd) {
+    File **files = malloc(t->nb_files * sizeof(void *));
+    memcpy(files, t->files, t->nb_files * sizeof(void *));
+    select_files(t->nb_files, files, data->nb_criterions, data->criterions);
+    write(socket_fd, "list [", 6);
+
+    for (int i = 0; i < t->nb_files - 1; ++i) {
+        if (files[i] != NULL) {
+            sprintf(tmp_buffer, "%s %d %d %s ", files[i]->name, files[i]->size, files[i]->pieceSize, files[i]->key);
+            write(socket_fd, tmp_buffer, strlen(tmp_buffer));
+        }
+    }
+    if (files[t->nb_files - 1] != NULL) {
+        sprintf(tmp_buffer, "%s %d %d %s", files[t->nb_files - 1]->name, files[t->nb_files - 1]->size,
+                files[t->nb_files - 1]->pieceSize, files[t->nb_files - 1]->key);
+        write(socket_fd, tmp_buffer, strlen(tmp_buffer));
+    }
+
+    write(socket_fd, "]\n", 3);
+}
+
+void remove_file(File *fs, File f, int *nb) {
     int i, j;
     for (i = 0; i < *nb; i++) {
-        if (streq(fs[i].name , f.name)) {
+        if (streq(fs[i].name, f.name)) {
             for (j = i; j < *nb - 1; j++) {
                 fs[j] = fs[j + 1];
             }
@@ -73,57 +112,67 @@ void remove_file(File * fs , File f ,int* nb){
     }
 }
 
-void select_by_name(File * f ,int nb, criterion c ){
-    for(int i=0 ; i< nb ; i++){
-        if (! streq(c.value.value_str,f[i].name)){
-            remove_file(f,f[i],&nb);
-        }
+void select_by_name(File *f, criterion *c) {
+    switch (c->op) {
+        case LT:
+            if (strcmp(f->name, c->value.value_str) >= 0)
+                f = NULL;
+            break;
+        case LE:
+            if (strcmp(f->name, c->value.value_str) > 0)
+                f = NULL;
+            break;
+        case EQ:
+            if (strcmp(f->name, c->value.value_str))
+                f = NULL;
+            break;
+        case GE:
+            if (strcmp(f->name, c->value.value_str) < 0)
+                f = NULL;
+            break;
+        case GT:
+            if (strcmp(f->name, c->value.value_str) <= 0)
+                f = NULL;
+            break;
+        case DI:
+            if (!strcmp(f->name, c->value.value_str))
+                f = NULL;
+            break;
+        default:
+            printf("UNRECOGNISED_OPERATOR ");
     }
 }
 
-void select_by_file_size( File * f ,int nb, criterion c){
-    
-    switch (c.op) {
+void select_by_file_size(File *f, criterion *c) {
+    switch (c->op) {
         case LT:
-            for(int i=0 ; i< nb ; i++){
-            if ( f[i].size < c.value.value_int){
-                remove_file(f,f[i],&nb);
-            }
+            if (f->size >= c->value.value_int) {
+                f = NULL;
             }
             break;
         case LE:
-            for(int i=0 ; i< nb ; i++){
-            if (c.value.value_int <= f[i].size){
-                remove_file(f,f[i],&nb);
-            }
+            if (f->size > c->value.value_int) {
+                f = NULL;
             }
             break;
         case EQ:
-            for(int i=0 ; i< nb ; i++){
-            if (f[i].size == c.value.value_int){
-                remove_file(f,f[i],&nb);
-            }
+            if (f->size != c->value.value_int) {
+                f = NULL;
             }
             break;
         case GE:
-            for(int i=0 ; i< nb ; i++){
-            if (f[i].size >= c.value.value_int){
-                remove_file(f,f[i],&nb);
-            }
+            if (f->size < c->value.value_int) {
+                f = NULL;
             }
             break;
         case GT:
-            for(int i=0 ; i< nb ; i++){
-            if (c.value.value_int < f[i].size){
-                remove_file(f,f[i],&nb);
-            }
+            if (f->size <= c->value.value_int) {
+                f = NULL;
             }
             break;
         case DI:
-            for(int i=0 ; i< nb ; i++){
-            if (c.value.value_int!=f[i].size){
-                remove_file(f,f[i],&nb);
-            }
+            if (f->size == c->value.value_int) {
+                f = NULL;
             }
             break;
         default:
@@ -131,38 +180,37 @@ void select_by_file_size( File * f ,int nb, criterion c){
     }
 }
 
-void select_files(File * f ,int nb, criterion c ){
-        switch (c.criteria) {
-        case FILENAME:
-            select_by_name(f ,nb, c );
-            break;
-        case FILESIZE:
-            select_by_file_size(f , nb, c );
-        default:
-            printf("UNRECOGNISED_CRITERIA ");
+void select_files(int nb_files, File **f, int nb_criterion, criterion *c) {
+    for (int i = 0; i < nb_files; ++i) {
+        for (int j = 0; j < nb_criterion; ++j) {
+            if (f[i] == NULL) // Déjà éliminé par un critérion
+                break;
+            switch (c[j].criteria) {
+                case FILENAME:
+                    select_by_name(f[i], &c[j]);
+                    break;
+                case FILESIZE:
+                    select_by_file_size(f[i], &c[j]);
+                    break;
+                default:
+                    printf("UNRECOGNISED_CRITERIA ");
+            }
+
+        }
     }
+
 }
 
-char *look(Tracker *t , lookData data){
-    File * files=t->files;;
-    criterion * l=data.criterions;
-    unsigned int nb=data.nb_criterions;
-    for(int i=0;i<nb;i++){
-        select_files(files,t->nb_files,l[i]);    
-    }
-    char *response = strndup("", 1); // To be changed.
-    return response;
-}
-
-Peer select_peer(Tracker *t ,int id){
-    for(int i=0;i<t->nb_peers;i++){
-        if(t->peers[i].peer_id ==id){
+Peer select_peer(Tracker *t, int id) {
+    for (int i = 0; i < t->nb_peers; i++) {
+        if (t->peers[i].peer_id == id) {
             return t->peers[i];
         }
     }
     Peer not_found = {.peer_id=-1, .addr_ip="", .num_port=-1};
     return not_found;
 }
+
 /*
 Peer * getfile(Tracker *t ,char * k ){
     Peer * p=malloc(t->nb_peers * sizeof(Peer));
@@ -177,22 +225,23 @@ Peer * getfile(Tracker *t ,char * k ){
 }*/
 
 
-Peer *getfile(Tracker *t ,char *k){
-    Peer *p=NULL;
-    for(int i=0; i<t->nb_files; ++i){
-        if(streq(t->files[i].key,k)){
-            return t->files[i].peers;
+Peer *getfile(Tracker *t, char *k) {
+    Peer *p = NULL;
+    for (int i = 0; i < t->nb_files; ++i) {
+        if (streq(t->files[i]->key, k)) {
+            return t->files[i]->peers;
         }
     }
     return p;
 }
 
 void free_on_exit(int signo) {
-    (void)signo;
-    for (int i=0; i<tracker.nb_peers; ++i)
+    (void) signo;
+    for (int i = 0; i < tracker.nb_peers; ++i)
         free_peer(&tracker.peers[i]);
-    for (int i=0; i<tracker.nb_files; ++i)
-        free_file(&tracker.files[i]);
+    for (int i = 0; i < tracker.nb_files; ++i)
+        free_file(tracker.files[i]);
+    free(tracker.files);
     exit(0);
     return;
 }

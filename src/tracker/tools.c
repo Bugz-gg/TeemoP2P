@@ -74,8 +74,23 @@ regex_t *getfile_regex() {
     return regex;
 }
 
+regex_t *update_regex() {
+    static regex_t *regex = NULL;
+    if (regex != NULL)
+        return regex;
+    regex = malloc(sizeof(regex_t));
+    char *pattern = "^update seed \\[(([a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
+    int ret = regcomp(regex, pattern, REG_EXTENDED);
+    if (ret) {
+        char error_message[100];
+        regerror(ret, regex, error_message, sizeof(error_message));
+        fprintf(stderr, "Failed to compile `update` regular expression. %s\n", error_message);
+    }
+    return regex;
+}
+
 void free_peer(Peer *peer) {
-    free(peer->addr_ip);
+    ; //free(peer->addr_ip);
 }
 
 void free_regex(regex_t *regex) {
@@ -92,10 +107,12 @@ void free_all_regex() {
     free_regex(getfile);
     regex_t *comparison = comparison_regex();
     free_regex(comparison);
+    regex_t *update = update_regex();
+    free_regex(update);
 }
 
 void free_file(File *file) {
-    free(file->name);
+    ; //free(file->name);
 }
 
 void free_announceData(announceData *data) {
@@ -115,6 +132,15 @@ void free_lookData(lookData *data) {
     free(data->criterions);
 }
 
+void free_updateData(updateData *data) {
+    for (int i=0; i<data->nb_keys; ++i)
+        free(data->keys[i]);
+    free(data->keys);
+    for (int i=0; i<data->nb_leech; ++i)
+        free(data->leech[i]);
+    free(data->leech);
+}
+
 // Function to check announce message
 announceData announceCheck(char *message) {
     announceData announceStruct = {.port=0, .nb_files=0, .nb_leech_keys=0, .is_valid=0};
@@ -122,7 +148,7 @@ announceData announceCheck(char *message) {
     regex_t *regex = announce_regex();
     regmatch_t matches[6];
     if (regexec(regex, message, 6, matches, 0)) {
-        fprintf(stderr, "(announce) Failed to match regular expression in %s\n", message);
+        fprintf(stderr, "(announce) Failed to match regular expression in :%s\n", message);
         return announceStruct;
     }
 
@@ -135,12 +161,12 @@ announceData announceCheck(char *message) {
 
     char *filesData = strndup(message + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
     int count = countDelim(filesData);
-
+    /*
     if (count % 4) {
         fprintf(stderr, "Incorrect file data in %s.\n", filesData);
         free(filesData);
         return announceStruct;
-    }
+    }*/
     int nbFiles = count / 4;
     File *files = malloc(nbFiles * sizeof(File));
     char *token = strtok(filesData, DELIM);
@@ -150,7 +176,12 @@ announceData announceCheck(char *message) {
     while (token != NULL) {
         remainder = index % 4;
         if (!remainder) {
-            files[index / 4].name = strndup(token, strlen(token));
+            char curr_char = *token;
+            int filled = 0;
+            while (curr_char) {
+                files[index / 4].name[filled++] = curr_char++;
+            }
+            files[index / 4].name[filled] = '\0';
         } else if (remainder == 1) {
             files[index / 4].size = atoi(token);
         } else if (remainder == 2) {
@@ -205,7 +236,7 @@ lookData lookCheck(char *message) {
     regex_t *regex = look_regex();
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
-        fprintf(stderr, "(look) Failed to match regular expression in %s\n", message);
+        fprintf(stderr, "(look) Failed to match regular expression in :%s\n", message);
         return lookStruct;
     }
 
@@ -234,7 +265,7 @@ lookData lookCheck(char *message) {
 
     while (token != NULL) {
         if (regexec(comp_regex, token, 5, comparison_match, 0)) {
-            fprintf(stderr, "Failed to match criterion expression in %s.\n", token);
+            fprintf(stderr, "Failed to match criterion expression in :%s.\n", token);
             free(criterions);
             return lookStruct;
         }
@@ -294,6 +325,14 @@ lookData lookCheck(char *message) {
             }
         }
 
+        // Check is the type is coherent with the criteria
+        if (criterions[index].criteria == FILENAME && criterions[index].value_type != STR) {
+            free(criterions);
+            free(criterions_str);
+            fprintf(stderr, "Incorrect value type for filesize : %s.\n", value);
+            return lookStruct;
+        }
+
         token = strtok(NULL, DELIM);
         ++index;
     }
@@ -312,7 +351,7 @@ getfileData getfileCheck(char *message) {
     regex_t *regex = getfile_regex();
     regmatch_t matches[2];
     if (regexec(regex, message, 2, matches, 0)) {
-        fprintf(stderr, "(getfile) Failed to match regular expression in %s\n", message);
+        fprintf(stderr, "(getfile) Failed to match regular expression in :%s\n", message);
         return getfileStruct;
     }
     // Check if key in files.
@@ -321,6 +360,56 @@ getfileData getfileCheck(char *message) {
     getfileStruct.key[32] = '\0';
     getfileStruct.is_valid = 1;
     return getfileStruct;
+}
+
+updateData updateCheck(char *message) {
+    updateData updateStruct = {.is_valid=0};
+
+    regex_t *regex = update_regex();
+    regmatch_t matches[5];
+    if (regexec(regex, message, 5, matches, 0)) {
+        fprintf(stderr, "(update) Failed to match regular expression in :%s\n", message);
+        return updateStruct;
+    }
+
+    int nb_keys = 0;
+    char *keyData = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
+    int count = countDelim(keyData);
+    count += (count==0);
+    char **keys = malloc(count * sizeof(char *));
+    char *token = strtok(keyData, DELIM);
+    int key_index = 0;
+    while (token != NULL) {
+        keys[key_index] = malloc(33 * sizeof(char));
+        strncpy(keys[key_index], token, 32);
+        keys[key_index][32] = '\0';
+        token = strtok(NULL, DELIM);
+        ++nb_keys;
+        ++key_index;
+    }
+    free(keyData);
+    int nb_leech_keys = 0;
+    char *leechData = strndup(message + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
+    count = countDelim(leechData);
+    count += (count==0);
+    char **leechKeys = malloc(count * sizeof(char *));
+    token = strtok(leechData, DELIM);
+    int leech_index = 0;
+    while (token != NULL) {
+        leechKeys[leech_index] = malloc(33 * sizeof(char));
+        strncpy(leechKeys[leech_index], token, 32);
+        leechKeys[leech_index][32] = '\0';
+        token = strtok(NULL, DELIM);
+        ++nb_leech_keys;
+        ++leech_index;
+    }
+    free(leechData);
+    updateStruct.is_valid = 1;
+    updateStruct.nb_keys = nb_keys;
+    updateStruct.keys = keys;
+    updateStruct.nb_leech = nb_leech_keys;
+    updateStruct.leech = leechKeys;
+    return updateStruct;
 }
 
 int peerCmp(Peer p1, Peer p2) {
@@ -385,6 +474,22 @@ int getfileStructCmp(getfileData gf1, getfileData gf2) {
     if (gf1.is_valid == gf2.is_valid && !gf1.is_valid)
         return 1;
     return streq(gf1.key, gf2.key);
+}
+
+int updateStructCmp(updateData u1, updateData u2) {
+    if ((u1.is_valid != u2.is_valid) || u1.nb_keys != u2.nb_keys || u1.nb_leech != u2.nb_leech)
+        return 0;
+    if (!u1.is_valid)
+        return 1;
+    for (int i=0; i<u1.nb_keys; ++i) {
+        if (!streq(u1.keys[i], u2.keys[i]))
+            return 0;
+    }
+    for (int i=0; i<u1.nb_leech; ++i) {
+        if (!streq(u1.leech[i], u2.leech[i]))
+            return 0;
+    }
+    return 1;
 }
 
 void print_criterion(criterion crit) {
@@ -470,6 +575,19 @@ void printLookData(lookData data) {
     }
 }
 
-
-
+void printUpdateData(updateData data) {
+    if (data.is_valid) {
+        printf("Keys :");
+        for (int i = 0; i < data.nb_keys; ++i) {
+            printf(" %s", data.keys[i]);
+        }
+        printf("\nLeech :");
+        for (int i = 0; i < data.nb_leech; ++i) {
+            printf(" %s", data.leech[i]);
+        }
+        printf("\n");
+    } else {
+        printf("updateData is not valid.\n");
+    }
+}
 

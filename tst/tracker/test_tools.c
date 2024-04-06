@@ -64,7 +64,7 @@ void test_announce() {
     announceData not_valid = {.is_valid=0, .nb_files=0, .nb_leech_keys=0, .port=0};
     assert(announceStructCmp(data5, not_valid));
     announceData data6 = announceCheck(
-            "announce listen 4222 seed [fgh 18 9 s]");
+            "announce listen 4222 seed [fgh 18 jzichfnt8lBnANS8AZNY8SN9kzox83h]");
     assert(announceStructCmp(data6, not_valid));
     announceData data7 = announceCheck(
             "announce listen 4222 seed [fgh 18 9i jzichint8SBnANS8AZNsY8SN9kzox83h]");
@@ -145,9 +145,51 @@ void test_getfile() {
     printf("\033[92mpassed\033[39m\n");
 }
 
+void test_update() {
+    printf(">>> update...");
+    updateData data = updateCheck("update seed [jzicsfnt8SBYA8NS8AZNY8SN9dkzo83h]");
+    char *key = "jzicsfnt8SBYA8NS8AZNY8SN9dkzo83h";
+    updateData expected_data = {.nb_keys=1, .keys=&key, .nb_leech=0, .is_valid=1};
+    assert(updateStructCmp(data, expected_data));
+
+    char *leech = "jzicsfnt8SBYA8NerAZNY8SN9dkzo83h";
+    updateData data2 = updateCheck("update seed [] leech [jzicsfnt8SBYA8NerAZNY8SN9dkzo83h]");
+    updateData expected_data2 = {.nb_keys=0, .leech=&leech, .nb_leech=1, .is_valid=1};
+    assert(updateStructCmp(data2, expected_data2));
+
+    char *key1 = "jzicsfnt8SBYA8NerAZNl8SN9dkzo83h";
+    char *key2 = "jzicsfnlzbBYA8NerAZNY8SN9dkzo83h";
+    char *keys[2] = {key1, key2};
+    updateData data3 = updateCheck("update seed [jzicsfnt8SBYA8NerAZNl8SN9dkzo83h jzicsfnlzbBYA8NerAZNY8SN9dkzo83h] leech [jzicsfnt8SBYA8NerAZNY8SN9dkzo83h]");
+    updateData expected_data3 = {.nb_keys=2, .keys=keys, .nb_leech=1, .leech=&leech, .is_valid=1};
+    assert(updateStructCmp(data3, expected_data3));
+
+    key1 = "jzicsfnt8SBYA8NerAZNllSN9dkzo83h";
+    key2 = "jzicsfnlzbBYA8NerAZNY8pN9dkzo83h";
+    keys[0] = key1;
+    keys[1] = key2;
+    char *leech1 = "lzicsfnt8SBYA8NerAZNllSN9dkzo83h";
+    char *leech2 = "jzicsfnt8SleA8NerAZNllSN9dkzo83h";
+    char *leech3 = "jzicsfnt8SBYA2NerAZNllSN9dkzo83h";
+    char *leechs[3] = {leech1, leech2, leech3};
+    updateData data4 = updateCheck("update seed [jzicsfnt8SBYA8NerAZNllSN9dkzo83h jzicsfnlzbBYA8NerAZNY8pN9dkzo83h] leech [lzicsfnt8SBYA8NerAZNllSN9dkzo83h jzicsfnt8SleA8NerAZNllSN9dkzo83h jzicsfnt8SBYA2NerAZNllSN9dkzo83h]");
+    updateData expected_data4 = {.nb_keys=2, .keys=keys, .nb_leech=3, .leech=leechs, .is_valid=1};
+    assert(updateStructCmp(data4, expected_data4));
+
+    // Not valid
+    updateData not_valid = {.is_valid=0};
+    updateData data5 = updateCheck("update seed [jzicsfnt8SBA8NS8AZNY8SN9dkzo83h]");
+    assert(updateStructCmp(data5, not_valid));
+    updateData data6 = updateCheck("update seed [jzi784sfnt8SBA8NS8AZNY8SN9dkzo83h]");
+    assert(updateStructCmp(data6, not_valid));
+    free_regex(comparison_regex());
+    printf("\033[92mpassed\033[39m\n");
+}
+
 int main() {
     test_announce();
     test_look();
     test_getfile();
+    test_update();
     return 0;
 }

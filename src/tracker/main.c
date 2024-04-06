@@ -29,9 +29,12 @@
 static threadpool thpool;
 static sig_t old_handler;
 static int sockfd;
-int client_socket[MAX_PEERS];
+int client_socket[MAX_PEERS] = {0};
+int bad_attempts[MAX_PEERS] = {0};
 
 void close_on_exit(int signo) {
+    free(tracker.files);
+    free(tracker.peers);
     thpool_destroy(thpool);
     signal(SIGINT, old_handler);
     close(sockfd);
@@ -81,13 +84,19 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
 
 // Fonction pour gérer les connexions clients dans des threads
 void handle_client_connection(void *newsockfd_void_ptr) {
-    int sockfd = (int) (intptr_t) newsockfd_void_ptr;
+    int client_sockfd = (int) (intptr_t) newsockfd_void_ptr;
     char buffer[256] = {0};
-    int error_count = 0;
+    int index = 0;
     int n = 0;
+    for (int i = 0; i < MAX_PEERS; ++i) {
+        if (client_socket[i] == client_sockfd) {
+            index = i;
+            break;
+        }
+    }
     // memset(buffer, 0, 256);
     while (1) {
-        n += read(sockfd, buffer+n, 255);
+        n += read(client_sockfd, buffer+n, 255);
         if (n < 0) {
             error("ERROR reading from socket");
             break;
@@ -104,63 +113,49 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     buffer[strcspn(buffer, "\r\n")] = 0;
     if (strcmp(buffer, "exit") == 0) {
         printf("Client requested to disconnect.\n");
-        for (int i = 0; i < MAX_PEERS; ++i) {
-            if (client_socket[i] == sockfd) {
-                client_socket[i] = 0;
-                break;
-            }
-        }
-        close(sockfd);
+        client_socket[index] = 0;
+        bad_attempts[index] = 0;
+        close(client_sockfd);
         return;
     }
     // Vérifie si le message est bien formaté
-    int check = handle_message(buffer, &tracker, NULL, sockfd); // Replace NULL by addr_ip
-    if (check == 1) {
-        // Message mal formaté
-        error_count++;
-        if (error_count >= 3) {
-            // Trois erreurs de suite, fermer la connexion
-            printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion.\033[39m\n");
-            for (int i = 0; i < MAX_PEERS; ++i) {
-                if (client_socket[i] == sockfd) {
-                    client_socket[i] = 0;
-                    break;
-                }
-            }
-            close(sockfd);
+    int check = handle_message(buffer, &tracker, NULL, client_sockfd); // Replace NULL by addr_ip
+    if (check == 1) { // Message mal formaté
+        ++bad_attempts[index];
+        if (bad_attempts[index] >= 3) {
+            printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion avec %d.\033[39m\n", client_socket[index]);
+            client_socket[index] = 0;
+            close(client_sockfd);
             return;
         }
     } else {
         // Message bien formaté, réinitialiser le compteur d'erreurs
-        error_count = 0;
+        bad_attempts[index] = 0;
     }
-    printf("Here is the message: %s\n", buffer);
-    n = write(sockfd, "I got your message\n", 19);
+    printf("Received message: %s\n", buffer);
+    /*n = write(client_sockfd, "I got your message\n", 19);
     if (n < 0) {
         error("ERROR writing to socket");
         return;
-    }
+    }*/
 }
 
 int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "ERROR, no port provided\n");
+        exit(1);
+    }
+
     int opt = TRUE;
     (void) tracker; // To remove Unused variable warning
     old_handler = signal(SIGINT, close_on_exit);
 
-    for (int i = 0; i < MAX_PEERS; i++) {
-        client_socket[i] = 0;
-    }
     int sockfd, newsockfd, portno;
     int max_sd, sd, activity;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
 
     init_tracker(&tracker);
-
-    if (argc < 2) {
-        fprintf(stderr, "ERROR, no port provided\n");
-        exit(1);
-    }
 
     // Initialiser le pool de threads
     thpool = thpool_init(NB_THREADS);
@@ -186,54 +181,47 @@ int main(int argc, char *argv[]) {
     clilen = sizeof(cli_addr);
     fd_set readfds;
     printf("\033[92mReady\033[39m\n");
-    while (1) { // TODO DEBUG
-        FD_ZERO(&readfds); // clear the socket set
-
-        FD_SET(sockfd, &readfds); // add master socket to set
+    while (1) {
+        FD_ZERO(&readfds); // Clear the socket set
+        FD_SET(sockfd, &readfds); // Add master socket to set
         max_sd = sockfd;
 
-        for (int i = 0; i < MAX_PEERS; i++) { // add child sockets to set
+        for (int i = 0; i < MAX_PEERS; i++) { // Add child sockets to set
             sd = client_socket[i]; // socket descriptor
 
-            // if valid socket descriptor then add to read list
-            if (sd > 0)
+            if (sd > 0) // Only add valid socket descriptors to read list
                 FD_SET(sd, &readfds);
 
-            // highest file descriptor number, need it for the select function
-            if (sd > max_sd)
+            if (sd > max_sd) // Highest file descriptor number for the select function
                 max_sd = sd;
         }
 
-        // wait for an activity on one of the sockets , timeout is NULL ,
-        // so wait indefinitely
+        // Wait indefinitely for an activity on one of the sockets
         activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
 
         if ((activity < 0) && (errno != EINTR)) {
             printf("select error");
         }
 
-        // If something happened on the master socket ,
-        // then it's an incoming connection
+        // Incoming connection
         if (FD_ISSET(sockfd, &readfds)) {
             if ((newsockfd = accept(sockfd,
                                     (struct sockaddr *) &cli_addr, (socklen_t * ) & clilen)) < 0) {
                 error("accept");
             }
 
-            // inform user of socket number - used in send and receive commands
+            // Inform user of socket number - used in send and receive commands
             printf("New connection, socket fd: %d , ip: %s , port: %d  \n ", newsockfd,
                    inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
 
             char *message = "ECHO Daemon v1.0 \r\n";
-            // send new connection greeting message
+            // Send new connection greeting message
             if (send(newsockfd, message, strlen(message), 0) != strlen(message)) {
                 perror("send");
             }
 
-            puts("Welcome message sent successfully");
-
-            // add new socket to array of sockets
-            for (int i = 0; i < MAX_PEERS; i++) {
+            // Add new socket to array of sockets
+            for (int i = 0; i < MAX_PEERS; ++i) {
                 if (client_socket[i] == 0) {
                     client_socket[i] = newsockfd;
                     printf("Adding to list of sockets as %d at %d\n", newsockfd, i);
@@ -242,7 +230,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // else it's some IO operation on some other socket
+        // Handle what happened to the active connections
         for (int i = 0; i < MAX_PEERS; i++) {
             sd = client_socket[i];
 
@@ -250,17 +238,10 @@ int main(int argc, char *argv[]) {
                 printf("Next fd: %d\n", sd);
                 // Soumettre la gestion de chaque nouvelle connexion au pool de threads
                 thpool_add_work(thpool, (void (*)(void *)) handle_client_connection, (void *) (intptr_t) sd);
-                // Close the socket and mark as 0 in list for reuse
 
-                // close(sd); //The connection is not necessarily closed.
-                //client_socket[i] = 0;
             }
         }
         thpool_wait(thpool);
     }
-
-    thpool_destroy(thpool);
-
-    close(sockfd);
     return 0;
 }

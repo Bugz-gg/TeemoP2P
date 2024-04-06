@@ -24,7 +24,6 @@ regex_t *announce_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    //char *pattern = "^announce listen ([0-9]+) seed \\[([a-zA-Z0-9 ]*)\\]( leech \\[(( |[a-zA-Z0-9]{32})*)\\])?$";
     char *pattern = "^announce listen ([0-9]+) seed \\[(([a-zA-Z0-9]+ [0-9]+ [0-9]+ [a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
     if (regcomp(regex, pattern, REG_EXTENDED)) {
         fprintf(stderr, "Failed to compile `announce` regular expression\n");
@@ -37,8 +36,8 @@ regex_t *look_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^look \\[(([a-z]+(<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\\]$";//"^look \\[((?:[a-z]+(?:<|<=|!=|=|>|>=)\\\"[a-zA-Z0-9]*\\\"| )*)\\]$";//"^look \\[((?:[a-z]+(?:<|<=|!=|=|>|>=)\\\".*\\\"| ))*\\]$"; //"^look \[((?:[a-z]+(?:<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\]$"
-    int ret = regcomp(regex, pattern, REG_EXTENDED); //^look \[((?:[a-z]+(?:<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\]$
+    char *pattern = "^look \\[(([a-z]+(<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\\]$";
+    int ret = regcomp(regex, pattern, REG_EXTENDED);
     if (ret) {
         char error_message[100];
         regerror(ret, regex, error_message, sizeof(error_message));
@@ -161,12 +160,7 @@ announceData announceCheck(char *message) {
 
     char *filesData = strndup(message + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
     int count = countDelim(filesData);
-    /*
-    if (count % 4) {
-        fprintf(stderr, "Incorrect file data in %s.\n", filesData);
-        free(filesData);
-        return announceStruct;
-    }*/
+
     int nbFiles = count / 4;
     File *files = malloc(nbFiles * sizeof(File));
     char *token = strtok(filesData, DELIM);
@@ -176,25 +170,13 @@ announceData announceCheck(char *message) {
     while (token != NULL) {
         remainder = index % 4;
         if (!remainder) {
-            char curr_char = *token;
-            int filled = 0;
-            while (curr_char) {
-                files[index / 4].name[filled++] = curr_char++;
-            }
-            files[index / 4].name[filled] = '\0';
+            strcpy(files[index / 4].name, token);
         } else if (remainder == 1) {
             files[index / 4].size = atoi(token);
         } else if (remainder == 2) {
             files[index / 4].pieceSize = atoi(token);
         } else {
-            /*if (strlen(token) != 32) {
-                fprintf(stderr, "Wrong md5sum hash size for %s.\n", files[index / 4].name);
-                return announceStruct;
-            }*/
-            for (int i = 0; i < 32; ++i) {
-                files[index / 4].key[i] = token[i];
-            }
-            files[index / 4].key[32] = '\0';
+            strcpy(files[index / 4].key, token);
         }
         token = strtok(NULL, DELIM);
         ++index;

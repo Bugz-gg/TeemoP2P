@@ -12,11 +12,10 @@ void test_announce() {
             "announce listen 2222 seed [teemo 14 7 jzichfnt8SBYA8NS8AZNY8SN9kzox83h]");
 
     File *expected_files = malloc(sizeof(File));
-    expected_files->name = strdup("teemo");
+    strcpy(expected_files->name, "teemo");
     expected_files->size = 14;
     expected_files->pieceSize = 7;
     strncpy(expected_files->key, "jzichfnt8SBYA8NS8AZNY8SN9kzox83h", 33);
-
     announceData expected_data = {.port=2222, .nb_files=1, .files = expected_files, .nb_leech_keys = 0, .is_valid=1};
     assert(announceStructCmp(data, expected_data));
 
@@ -42,11 +41,11 @@ void test_announce() {
     announceData data4 = announceCheck(
             "announce listen 2522 seed [ferIV 120 12 9kOz8SB18SBYA8NS8AZNY8SN9kzox83h interruption 94 2 8jzkhfnt8SBYA8NS8AZNY8SN9kzox83h] leech [jzichfnt818nA8N78jzkY8SN9kzox83h jzichfnt818nA8N7rlpNY8SN9kzox83h]");
     File *expected_files4 = malloc(2 * sizeof(File));
-    expected_files4[0].name = strdup("ferIV");
+    strcpy(expected_files4[0].name, "ferIV");
     expected_files4[0].size = 120;
     expected_files4[0].pieceSize = 12;
     strncpy(expected_files4[0].key, "9kOz8SB18SBYA8NS8AZNY8SN9kzox83h", 33);
-    expected_files4[1].name = strdup("interruption");
+    strcpy(expected_files4[1].name, "interruption");
     expected_files4[1].size = 94;
     expected_files4[1].pieceSize = 2;
     strncpy(expected_files4[1].key, "8jzkhfnt8SBYA8NS8AZNY8SN9kzox83h", 33);

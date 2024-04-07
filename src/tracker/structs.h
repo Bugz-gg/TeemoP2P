@@ -27,6 +27,7 @@ typedef struct {
     int pieceSize;
     char key[33];
     int nb_peers;
+    int alloc_peers;
     Peer *peers;
     char name[MAX_FILE_NAME_SIZE];
 } File;

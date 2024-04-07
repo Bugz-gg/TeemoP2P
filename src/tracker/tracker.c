@@ -46,10 +46,19 @@ int new_id(Tracker *t, char *addr_ip) {
     return new_id + 1;
 }
 
-void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) { // TODO Check if file already exists and add peer to it.
-    int nb_new_files = d->nb_files;
+File *getfile(Tracker *t, char *k) {
+    for (int i = 0; i < t->nb_files; ++i) {
+        if (streq(t->files[i]->key, k)) {
+            return t->files[i];
+        }
+    }
+    return NULL;
+}
+
+void announce(Tracker *t, announceData *d, char *addr_ip,
+              int socket_fd) { // TODO Check if peer already exists and add peer if not.
     int changed = 0;
-    if (t->nb_peers+1>t->alloc_peers) {
+    if (t->nb_peers + 1 > t->alloc_peers) {
         t->alloc_peers *= 2;
         changed = 1;
     }
@@ -57,23 +66,68 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) { // TO
         t->peers = realloc(t->peers, (t->alloc_peers) * sizeof(Peer));
     t->peers[t->nb_peers].num_port = d->port;
     t->peers[t->nb_peers].peer_id = new_id(t, addr_ip);
-    int filled = 0;
-    while (*addr_ip)
-        t->peers[t->nb_peers].addr_ip[filled++] = *addr_ip++;
+    strcpy(t->peers[t->nb_peers].addr_ip, addr_ip);
     t->nb_peers++;
 
-    changed = 0;
-    while (t->nb_files + nb_new_files > t->alloc_files) {
-        t->alloc_files *= 2;
-        changed = 1;
-    }
-    if (changed)
-        t->files = realloc(t->files, (t->alloc_files) * sizeof(void *));
+    File *file;
+    for (int i = 0; i < d->nb_files; ++i) {
+        file = getfile(t, d->files[i]);
+        if (file == NULL) {
+            ++t->nb_files;
+            if (t->alloc_files <= t->nb_files) {
+                t->alloc_files *= 2;
+                t->files = realloc(t->files, t->alloc_files * sizeof(void *));
+            }
+            file = t->files[t->nb_files];
+            file->name = d->files[i].name;
+            file->size = d->files[i].size;
+            strcpy(file->key, d->files[i].key);
+            file->pieceSize = d->files[i].pieceSize;
+            file->alloc_peers = MACROT0BEADDED;
+            file->nb_peers = 0;
+            file->peers = malloc(file->alloc_peers*sizeof(Peer));
+        }
+        // Check is file data is coherent ?
+        if (streq(file->name, "")) { // If it was first added as leech.
+            file = t->files[t->nb_files];
+            file->name = d->files[i].name;
+            file->size = d->files[i].size;
+            file->pieceSize = d->files[i].pieceSize;
+        }
+        ++file->nb_peers;
+        if (file->alloc_peers <= file->nb_peers) {
+            file->alloc_peers *= 2;
+            file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
+        }
+        file->peers[file->nb_peers] = t->peers[t->nb_peers];
 
-    for (int i = 0; i < nb_new_files; ++i) {
-        t->files[t->nb_files + i] = &d->files[i];
     }
-    t->nb_files += nb_new_files;
+
+    for (int i = 0; i < d->nb_leech_keys; ++i) {
+        file = getfile(t, d->leechKeys[i]);
+        if (file == NULL) {
+            ++t->nb_files;
+            if (t->alloc_files <= t->nb_files) {
+                t->alloc_files *= 2;
+                t->files = realloc(t->files, t->alloc_files * sizeof(void *));
+            }
+
+            file = t->files[t->nb_files];
+            file->name[0] = '\0'; // Tell that we only got the key from leech.
+            strcpy(file->key, d->files[i].key);
+            file->alloc_peers = MACROT0BEADDED;
+            file->nb_peers = 0;
+            file->peers = malloc(file->alloc_peers*sizeof(Peer));
+        }
+        ++file->nb_peers;
+        if (file->alloc_peers <= file->nb_peers) {
+            file->alloc_peers *= 2;
+            file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
+        }
+        file->peers[file->nb_peers] = t->peers[t->nb_peers];
+
+    }
+
 
     write(socket_fd, "OK\n", 3);
 }
@@ -223,17 +277,6 @@ Peer * getfile(Tracker *t ,char * k ){
     }
     return p;
 }*/
-
-
-Peer *getfile(Tracker *t, char *k) {
-    Peer *p = NULL;
-    for (int i = 0; i < t->nb_files; ++i) {
-        if (streq(t->files[i]->key, k)) {
-            return t->files[i]->peers;
-        }
-    }
-    return p;
-}
 
 void free_on_exit(int signo) {
     (void) signo;

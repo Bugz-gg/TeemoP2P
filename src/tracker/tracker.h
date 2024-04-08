@@ -13,3 +13,6 @@ void select_files(int, File **, int, criterion *);
 void free_on_exit(int);
 
 void init_tracker(Tracker *);
+
+void print_tracker_peers(Tracker *);
+void print_tracker_files(Tracker *);

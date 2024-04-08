@@ -5,7 +5,7 @@
 #include "tools.h"
 #include "tracker.h"
 
-#define MAX_FILES 100
+#define MAX_FILES 100 // Check coherence with structs.h
 #define MAX_PEERS 200
 
 char tmp_buffer[200]; // Used to send messages back.
@@ -13,21 +13,29 @@ char tmp_buffer[200]; // Used to send messages back.
 void init_tracker(Tracker *t) {
     t->nb_files = 0;
     t->nb_peers = 0;
+    t->alloc_files = MAX_FILES;
+    t->alloc_peers = MAX_PEERS;
     t->files = malloc(MAX_FILES * sizeof(File));
     t->peers = malloc(MAX_PEERS * sizeof(Peer));
 }
 
 void print_tracker_files(Tracker *t) {
     for (int i = 0; i < t->nb_files; i++) {
-        printf("Filename: %s\n", t->files[i]->name);
-        printf("Size: %d\n", t->files[i]->size);
-        printf("Block Size: %d\n", t->files[i]->pieceSize);
-        printf("Key: %s\n", t->files[i]->key);
-        printf("Peers' ids :");
-        for (int j = 0; i < t->files[i]->nb_peers; ++j)
+        printf("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s, \033[0;34mPeers' ids\033[39m: ", t->files[i]->name, t->files[i]->size, t->files[i]->pieceSize, t->files[i]->key);
+        for (int j = 0; j < t->files[i]->nb_peers; ++j)
             printf("%d ", t->files[i]->peers[j]->peer_id);
-        printf("\n\n");
+        printf("\n");
 
+    }
+}
+
+void print_peer(Peer *p) {
+    printf("(%d) \033[0;33m%s:%d\033[39m.\033[39m\n", p->peer_id, p->addr_ip, p->num_port);
+}
+
+void print_tracker_peers(Tracker *t) {
+    for (int i=0; i<t->nb_peers; ++i) {
+        print_peer(t->peers[i]);
     }
 }
 
@@ -53,26 +61,29 @@ File *getfile(Tracker *t, char *k) {
     return NULL;
 }
 
-Peer *getpeer(Tracker *t, char *IP, int port) {
-    for (int i = 0; i < t->nb_peers; ++i) {
-        if (streq(t->peers[i]->addr_ip, IP) && t->peers[i]->num_port == port)
-            return t->peers[i];
+Peer *getpeer(Peer **peers, int nb_peers, char *IP, int port) {
+    printf("Searching for %s:%d\n", IP, port);
+    for (int i = 0; i < nb_peers; ++i) {
+        printf("Currently %s:%d\n", peers[i]->addr_ip, peers[i]->num_port);
+        if (streq(peers[i]->addr_ip, IP) && peers[i]->num_port == port)
+            return peers[i];
     }
     return NULL;
 }
 
 void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
-    Peer *peer = getpeer(t, addr_ip, d->port);
+    Peer *peer = getpeer(t->peers, t->nb_peers, addr_ip, d->port);
     if (peer == NULL) {
-        t->nb_peers++;
-        if (t->nb_peers > t->alloc_peers) {
+        if (t->nb_peers+1 > t->alloc_peers) {
             t->alloc_peers *= 2;
             t->peers = realloc(t->peers, (t->alloc_peers) * sizeof(Peer));
         }
+        t->peers[t->nb_peers] = malloc(sizeof(Peer));
         peer = t->peers[t->nb_peers];
         peer->num_port = d->port;
         peer->peer_id = new_id(t, addr_ip, d->port);
         strcpy(peer->addr_ip, addr_ip);
+        ++t->nb_peers;
     }
 
     // Check coherence ? The following lines may not be necessary.
@@ -84,11 +95,12 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
     for (int i = 0; i < d->nb_files; ++i) {
         file = getfile(t, d->files[i].key);
         if (file == NULL) {
-            ++t->nb_files;
-            if (t->alloc_files <= t->nb_files) {
+
+            if (t->alloc_files < t->nb_files+1) {
                 t->alloc_files *= 2;
                 t->files = realloc(t->files, t->alloc_files * sizeof(void *));
             }
+            t->files[t->nb_files] = malloc(sizeof(File));
             file = t->files[t->nb_files];
             strcpy(file->name, d->files[i].name);
             file->size = d->files[i].size;
@@ -97,6 +109,7 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
             file->alloc_peers = ALLOC_PEERS;
             file->nb_peers = 0;
             file->peers = malloc(file->alloc_peers * sizeof(Peer));
+            ++t->nb_files;
         }
         // Check is file data is coherent ?
         if (streq(file->name, "")) { // If it was first added as leech.
@@ -105,20 +118,21 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
             file->size = d->files[i].size;
             file->pieceSize = d->files[i].pieceSize;
         }
-        ++file->nb_peers;
-        if (file->alloc_peers <= file->nb_peers) {
-            file->alloc_peers *= 2;
-            file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
+        Peer *search_peer = getpeer(file->peers, file->nb_peers, peer->addr_ip, peer->num_port);
+        if (search_peer == NULL) {
+            if (file->alloc_peers < file->nb_peers + 1) {
+                file->alloc_peers *= 2;
+                file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
+            }
+            file->peers[file->nb_peers] = peer;
+            ++file->nb_peers;
         }
-        file->peers[file->nb_peers] = peer;
-
     }
 
     for (int i = 0; i < d->nb_leech_keys; ++i) {
         file = getfile(t, d->leechKeys[i]);
         if (file == NULL) {
-            ++t->nb_files;
-            if (t->alloc_files <= t->nb_files) {
+            if (t->alloc_files < t->nb_files+1) {
                 t->alloc_files *= 2;
                 t->files = realloc(t->files, t->alloc_files * sizeof(void *));
             }
@@ -129,16 +143,18 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
             file->alloc_peers = ALLOC_PEERS;
             file->nb_peers = 0;
             file->peers = malloc(file->alloc_peers * sizeof(Peer));
+            ++t->nb_files;
         }
-        ++file->nb_peers;
-        if (file->alloc_peers <= file->nb_peers) {
-            file->alloc_peers *= 2;
-            file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
+        Peer *search_peer = getpeer(file->peers, file->nb_peers, peer->addr_ip, peer->num_port);
+        if (search_peer == NULL) {
+            if (file->alloc_peers < file->nb_peers + 1) {
+                file->alloc_peers *= 2;
+                file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
+            }
+            file->peers[file->nb_peers] = t->peers[t->nb_peers];
+            ++file->nb_peers;
         }
-        file->peers[file->nb_peers] = t->peers[t->nb_peers];
-
     }
-
 
     write(socket_fd, "OK\n", 3);
 }

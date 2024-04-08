@@ -2,8 +2,8 @@
 #define STRUCTS_H
 #define MAX_FILE_NAME_SIZE 50
 #define MAX_IP_ADDR_SIZE 17
-#define ALLOC_PEERS 50
 #define ALLOC_FILES 100
+#define ALLOC_PEERS 200
 
 
 enum criterias {

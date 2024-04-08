@@ -57,6 +57,8 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
     if (aData.is_valid) {
         announce(tracker, &aData, addr_ip, socket_fd);
         free_announceData(&aData);
+        print_tracker_files(tracker);
+        print_tracker_peers(tracker);
         return 0;
     }
     free_announceData(&aData);
@@ -124,6 +126,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     char clientip[MAX_IP_ADDR_SIZE];
     strcpy(clientip, inet_ntoa(addr.sin_addr));
     int port = ntohs(addr.sin_port);
+    printf("Message reçu de \033[0;33m%s:%d\033[39m: %s\n", clientip, port, buffer);
 
     // Vérifie si le message est bien formaté
     int check = handle_message(buffer, &tracker, clientip, client_sockfd); // Replace NULL by addr_ip
@@ -139,7 +142,6 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         // Message bien formaté, réinitialiser le compteur d'erreurs
         bad_attempts[index] = 0;
     }
-    printf("Message reçu de \033[0;33m%s:%d\033[39m: %s\n", clientip, port, buffer);
     /*n = write(client_sockfd, "I got your message\n", 19);
     if (n < 0) {
         error("ERROR writing to socket");
@@ -218,7 +220,7 @@ int main(int argc, char *argv[]) {
             }
 
             // Inform user of socket number - used in send and receive commands
-            printf("New connection, socket fd: %d , ip: %s , port: %d  \n ", newsockfd,
+            printf("New connection, socket fd: %d, \033[0;33m%s:%d\033[39m.\033[39m \n", newsockfd,
                    inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
 
             char *message = "ECHO Daemon v1.0 \r\n";

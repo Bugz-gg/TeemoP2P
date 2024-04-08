@@ -3,7 +3,7 @@
 
 static Tracker tracker;
 
-int new_id(Tracker *, char *);
+int new_id(Tracker *, char *, int);
 
 void announce(Tracker *, announceData *, char *, int);
 void look(Tracker *, lookData *, int);

@@ -28,7 +28,7 @@ typedef struct {
     char key[33];
     int nb_peers;
     int alloc_peers;
-    Peer *peers;
+    Peer **peers;
     char name[MAX_FILE_NAME_SIZE];
 } File;
 
@@ -72,7 +72,7 @@ typedef struct {
 } updateData;
 
 typedef struct {
-    Peer *peers;
+    Peer **peers;
     File **files;
     int nb_files;
     int nb_peers;

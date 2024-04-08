@@ -118,12 +118,19 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         close(client_sockfd);
         return;
     }
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    getpeername(client_sockfd, (struct sockaddr *)&addr, &addr_size);
+    char clientip[MAX_IP_ADDR_SIZE];
+    strcpy(clientip, inet_ntoa(addr.sin_addr));
+    int port = ntohs(addr.sin_port);
+
     // Vérifie si le message est bien formaté
-    int check = handle_message(buffer, &tracker, NULL, client_sockfd); // Replace NULL by addr_ip
+    int check = handle_message(buffer, &tracker, clientip, client_sockfd); // Replace NULL by addr_ip
     if (check == 1) { // Message mal formaté
         ++bad_attempts[index];
         if (bad_attempts[index] >= 3) {
-            printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion avec %d.\033[39m\n", client_socket[index]);
+            printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion avec \033[0;33m%s:%d\033[39m.\033[39m\n", clientip, port);
             client_socket[index] = 0;
             close(client_sockfd);
             return;
@@ -132,7 +139,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         // Message bien formaté, réinitialiser le compteur d'erreurs
         bad_attempts[index] = 0;
     }
-    printf("Received message: %s\n", buffer);
+    printf("Message reçu de \033[0;33m%s:%d\033[39m: %s\n", clientip, port, buffer);
     /*n = write(client_sockfd, "I got your message\n", 19);
     if (n < 0) {
         error("ERROR writing to socket");
@@ -235,7 +242,6 @@ int main(int argc, char *argv[]) {
             sd = client_socket[i];
 
             if (sd>0 && FD_ISSET(sd, &readfds)) {
-                printf("Next fd: %d\n", sd);
                 // Soumettre la gestion de chaque nouvelle connexion au pool de threads
                 thpool_add_work(thpool, (void (*)(void *)) handle_client_connection, (void *) (intptr_t) sd);
 

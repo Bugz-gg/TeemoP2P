@@ -147,7 +147,7 @@ announceData announceCheck(char *message) {
     regex_t *regex = announce_regex();
     regmatch_t matches[6];
     if (regexec(regex, message, 6, matches, 0)) {
-        fprintf(stderr, "(announce) Failed to match regular expression in :%s\n", message);
+        fprintf(stderr, "(announce) Message invalide :\033[0;33m%s\033[39m\n", message);
         return announceStruct;
     }
 
@@ -218,7 +218,7 @@ lookData lookCheck(char *message) {
     regex_t *regex = look_regex();
     regmatch_t matches[3];
     if (regexec(regex, message, 3, matches, 0)) {
-        fprintf(stderr, "(look) Failed to match regular expression in :%s\n", message);
+        fprintf(stderr, "(look) Message invalide :\033[0;33m%s\033[39m\n", message);
         return lookStruct;
     }
 
@@ -247,7 +247,7 @@ lookData lookCheck(char *message) {
 
     while (token != NULL) {
         if (regexec(comp_regex, token, 5, comparison_match, 0)) {
-            fprintf(stderr, "Failed to match criterion expression in :%s.\n", token);
+            fprintf(stderr, "(criterion) Message invalide :\033[0;33m%s\033[39m\n.\n", token);
             free(criterions);
             return lookStruct;
         }
@@ -333,7 +333,7 @@ getfileData getfileCheck(char *message) {
     regex_t *regex = getfile_regex();
     regmatch_t matches[2];
     if (regexec(regex, message, 2, matches, 0)) {
-        fprintf(stderr, "(getfile) Failed to match regular expression in :%s\n", message);
+        fprintf(stderr, "(getfile) Message invalide :\033[0;33m%s\033[39m\n", message);
         return getfileStruct;
     }
     // Check if key in files.
@@ -350,7 +350,7 @@ updateData updateCheck(char *message) {
     regex_t *regex = update_regex();
     regmatch_t matches[5];
     if (regexec(regex, message, 5, matches, 0)) {
-        fprintf(stderr, "(update) Failed to match regular expression in :%s\n", message);
+        fprintf(stderr, "(update) Message invalide :\033[0;33m%s\033[39m\n", message);
         return updateStruct;
     }
 

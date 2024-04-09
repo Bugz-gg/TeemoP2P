@@ -15,7 +15,7 @@ unsigned int countDelim(const char *str) { //  Seulement si DELIM ne fait qu'un 
     return count + (count > 0);
 }
 
-int streq(char *str1, char *str2) {
+int streq(const char *str1, const char *str2) {
     return !strcmp(str1, str2);
 }
 
@@ -90,6 +90,7 @@ regex_t *update_regex() {
 
 void free_peer(Peer *peer) {
     ; //free(peer->addr_ip);
+    free(peer);
 }
 
 void free_regex(regex_t *regex) {
@@ -111,12 +112,15 @@ void free_all_regex() {
 }
 
 void free_file(File *file) {
-    ; //free(file->name);
+    //for (int i=0; i<file->nb_peers; ++i)
+    //    free(file->peers[i]);
+    free(file->peers);
+    free(file);
 }
 
 void free_announceData(announceData *data) {
-    for (int i = 0; i < data->nb_files; ++i)
-        free_file(&data->files[i]);
+    //for (int i = 0; i < data->nb_files; ++i)
+    //    free_file(&data->files[i]);
     free(data->files);
     for (int i = 0; i < data->nb_leech_keys; ++i)
         free(data->leechKeys[i]);
@@ -132,10 +136,10 @@ void free_lookData(lookData *data) {
 }
 
 void free_updateData(updateData *data) {
-    for (int i=0; i<data->nb_keys; ++i)
+    for (int i = 0; i < data->nb_keys; ++i)
         free(data->keys[i]);
     free(data->keys);
-    for (int i=0; i<data->nb_leech; ++i)
+    for (int i = 0; i < data->nb_leech; ++i)
         free(data->leech[i]);
     free(data->leech);
 }
@@ -171,6 +175,7 @@ announceData announceCheck(char *message) {
         remainder = index % 4;
         if (!remainder) {
             strcpy(files[index / 4].name, token);
+            files[index / 4].peers = NULL;
         } else if (remainder == 1) {
             files[index / 4].size = atoi(token);
         } else if (remainder == 2) {
@@ -186,6 +191,7 @@ announceData announceCheck(char *message) {
     int nb_leech_keys = 0;
     char *leechData = strndup(message + matches[5].rm_so, matches[5].rm_eo - matches[5].rm_so);
     count = countDelim(leechData);
+    count += (count==0);
     char **leechKeys = malloc(count * sizeof(char *));
     token = strtok(leechData, DELIM);
     int leech_index = 0;
@@ -463,11 +469,11 @@ int updateStructCmp(updateData u1, updateData u2) {
         return 0;
     if (!u1.is_valid)
         return 1;
-    for (int i=0; i<u1.nb_keys; ++i) {
+    for (int i = 0; i < u1.nb_keys; ++i) {
         if (!streq(u1.keys[i], u2.keys[i]))
             return 0;
     }
-    for (int i=0; i<u1.nb_leech; ++i) {
+    for (int i = 0; i < u1.nb_leech; ++i) {
         if (!streq(u1.leech[i], u2.leech[i]))
             return 0;
     }

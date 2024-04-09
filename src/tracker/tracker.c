@@ -21,7 +21,8 @@ void init_tracker(Tracker *t) {
 
 void print_tracker_files(Tracker *t) {
     for (int i = 0; i < t->nb_files; i++) {
-        printf("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s, \033[0;34mPeers' ids\033[39m: ", t->files[i]->name, t->files[i]->size, t->files[i]->pieceSize, t->files[i]->key);
+        streq(t->files[i]->name, "") ? printf("\033[0;34mLeech file key\033[39m:%s, \033[0;34mPeers' ids\033[39m: ", t->files[i]->key) :printf("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s, \033[0;34mPeers' ids\033[39m: ",
+               t->files[i]->name, t->files[i]->size, t->files[i]->pieceSize, t->files[i]->key);
         for (int j = 0; j < t->files[i]->nb_peers; ++j)
             printf("%d ", t->files[i]->peers[j]->peer_id);
         printf("\n");
@@ -34,7 +35,7 @@ void print_peer(Peer *p) {
 }
 
 void print_tracker_peers(Tracker *t) {
-    for (int i=0; i<t->nb_peers; ++i) {
+    for (int i = 0; i < t->nb_peers; ++i) {
         print_peer(t->peers[i]);
     }
 }
@@ -62,9 +63,7 @@ File *getfile(Tracker *t, char *k) {
 }
 
 Peer *getpeer(Peer **peers, int nb_peers, char *IP, int port) {
-    printf("Searching for %s:%d\n", IP, port);
     for (int i = 0; i < nb_peers; ++i) {
-        printf("Currently %s:%d\n", peers[i]->addr_ip, peers[i]->num_port);
         if (streq(peers[i]->addr_ip, IP) && peers[i]->num_port == port)
             return peers[i];
     }
@@ -72,54 +71,55 @@ Peer *getpeer(Peer **peers, int nb_peers, char *IP, int port) {
 }
 
 void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
-    Peer *peer = getpeer(t->peers, t->nb_peers, addr_ip, d->port);
-    if (peer == NULL) {
-        if (t->nb_peers+1 > t->alloc_peers) {
+    Peer *peer = getpeer(t->peers, t->nb_peers, addr_ip, d->port); // Vérifie si le peer a déjà communiqué.
+    if (peer == NULL) { // Enregistre le peer.
+        if (t->nb_peers + 1 > t->alloc_peers) { // Réalloue de la place dans t->peers
             t->alloc_peers *= 2;
             t->peers = realloc(t->peers, (t->alloc_peers) * sizeof(Peer));
         }
-        t->peers[t->nb_peers] = malloc(sizeof(Peer));
+        t->peers[t->nb_peers] = malloc(sizeof(Peer)); // Alloue la place d'un Peer pour mettre son adresse dans t->peers
         peer = t->peers[t->nb_peers];
         peer->num_port = d->port;
         peer->peer_id = new_id(t, addr_ip, d->port);
         strcpy(peer->addr_ip, addr_ip);
         ++t->nb_peers;
     }
+    // Le peer est maintenant enregistré.
 
-    // Check coherence ? The following lines may not be necessary.
-    peer->num_port = d->port;
+    // TODO: Check coherence ? The following lines may not be necessary.
+    /*peer->num_port = d->port;
     peer->peer_id = new_id(t, addr_ip, d->port);
-    strcpy(peer->addr_ip, addr_ip);
+    strcpy(peer->addr_ip, addr_ip);*/
 
     File *file;
     for (int i = 0; i < d->nb_files; ++i) {
-        file = getfile(t, d->files[i].key);
-        if (file == NULL) {
-
-            if (t->alloc_files < t->nb_files+1) {
+        file = getfile(t, d->files[i].key); // Vérifie si le fichier est déjà enregistré.
+        if (file == NULL) { // Enregistre le fichier.
+            if (t->alloc_files < t->nb_files + 1) { // Réalloue de la place si besoin.
                 t->alloc_files *= 2;
                 t->files = realloc(t->files, t->alloc_files * sizeof(void *));
             }
-            t->files[t->nb_files] = malloc(sizeof(File));
+            t->files[t->nb_files] = malloc(sizeof(File)); // Alloue un File pour mettre son adresse dans t->files
             file = t->files[t->nb_files];
             strcpy(file->name, d->files[i].name);
             file->size = d->files[i].size;
-            strcpy(file->key, d->files[i].key);
             file->pieceSize = d->files[i].pieceSize;
-            file->alloc_peers = ALLOC_PEERS;
+            strcpy(file->key, d->files[i].key);
             file->nb_peers = 0;
+            file->alloc_peers = ALLOC_PEERS;
             file->peers = malloc(file->alloc_peers * sizeof(Peer));
             ++t->nb_files;
         }
+
+        // Le fichier est maintenant enregistré.
         // Check is file data is coherent ?
-        if (streq(file->name, "")) { // If it was first added as leech.
-            file = t->files[t->nb_files];
+        if (streq(file->name, "")) { // Si le fichier a été ajouté en leech, on ne connaît pas ses informations.
             strcpy(file->name, d->files[i].name);
             file->size = d->files[i].size;
             file->pieceSize = d->files[i].pieceSize;
         }
         Peer *search_peer = getpeer(file->peers, file->nb_peers, peer->addr_ip, peer->num_port);
-        if (search_peer == NULL) {
+        if (search_peer == NULL) { // Ajout du peer pour le fichier si besoin.
             if (file->alloc_peers < file->nb_peers + 1) {
                 file->alloc_peers *= 2;
                 file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
@@ -132,16 +132,16 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
     for (int i = 0; i < d->nb_leech_keys; ++i) {
         file = getfile(t, d->leechKeys[i]);
         if (file == NULL) {
-            if (t->alloc_files < t->nb_files+1) {
+            if (t->alloc_files < t->nb_files + 1) {
                 t->alloc_files *= 2;
                 t->files = realloc(t->files, t->alloc_files * sizeof(void *));
             }
-
+            t->files[t->nb_files] = malloc(sizeof(File));
             file = t->files[t->nb_files];
-            file->name[0] = '\0'; // Tell that we only got the key from leech.
-            strcpy(file->key, d->files[i].key);
-            file->alloc_peers = ALLOC_PEERS;
+            file->name[0] = '\0'; // Indique que le fichier a été découvert en leech.
+            strcpy(file->key, d->leechKeys[i]);
             file->nb_peers = 0;
+            file->alloc_peers = ALLOC_PEERS;
             file->peers = malloc(file->alloc_peers * sizeof(Peer));
             ++t->nb_files;
         }
@@ -151,7 +151,7 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
                 file->alloc_peers *= 2;
                 file->peers = realloc(file->peers, file->alloc_peers * sizeof(Peer));
             }
-            file->peers[file->nb_peers] = t->peers[t->nb_peers];
+            file->peers[file->nb_peers] = peer;
             ++file->nb_peers;
         }
     }
@@ -306,12 +306,16 @@ Peer * getfile(Tracker *t ,char * k ){
 }*/
 
 void free_on_exit(int signo) {
+    printf("On exit 2 : %d\n", tracker.nb_files);
     (void) signo;
     for (int i = 0; i < tracker.nb_peers; ++i)
         free_peer(tracker.peers[i]);
     free(tracker.peers);
-    for (int i = 0; i < tracker.nb_files; ++i)
+    printf("On exit : %d\n", tracker.nb_files);
+    for (int i = 0; i < tracker.nb_files; ++i) {
+        printf("i: %d\n", i);
         free_file(tracker.files[i]);
+    }
     free(tracker.files);
     exit(0);
     return;

@@ -33,13 +33,23 @@ int client_socket[MAX_PEERS] = {0};
 int bad_attempts[MAX_PEERS] = {0};
 
 void close_on_exit(int signo) {
-    free(tracker.files);
-    free(tracker.peers);
+    //free(tracker.files);
+    //free(tracker.peers);
     thpool_destroy(thpool);
     signal(SIGINT, old_handler);
     close(sockfd);
     free_all_regex();
-    free_on_exit(signo);
+    //free_on_exit(signo);
+    (void) signo;
+    for (int i = 0; i < tracker.nb_peers; ++i)
+        free_peer(tracker.peers[i]);
+    free(tracker.peers);
+    for (int i = 0; i < tracker.nb_files; ++i) {
+        free_file(tracker.files[i]);
+    }
+    free(tracker.files);
+    exit(0);
+    return;
 }
 
 void error(char *msg) {

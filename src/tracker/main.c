@@ -33,8 +33,6 @@ int client_socket[MAX_PEERS] = {0};
 int bad_attempts[MAX_PEERS] = {0};
 
 void close_on_exit(int signo) {
-    //free(tracker.files);
-    //free(tracker.peers);
     thpool_destroy(thpool);
     signal(SIGINT, old_handler);
     close(sockfd);
@@ -62,35 +60,39 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
         write(socket_fd, "pong\n", 5);
         return 0;
     }
-
-    announceData aData = announceCheck(message);
-    if (aData.is_valid) {
-        announce(tracker, &aData, addr_ip, socket_fd);
+    if (streqlim(message, "announce", 8)) {
+        announceData aData = announceCheck(message);
+        if (aData.is_valid) {
+            announce(tracker, &aData, addr_ip, socket_fd);
+            free_announceData(&aData);
+            print_tracker_files(tracker);
+            print_tracker_peers(tracker);
+            return 0;
+        }
         free_announceData(&aData);
-        print_tracker_files(tracker);
-        print_tracker_peers(tracker);
-        return 0;
-    }
-    free_announceData(&aData);
-    lookData lData = lookCheck(message);
-    if (lData.is_valid) {
-        look(tracker, &lData, socket_fd);
+    } else if (streqlim(message, "look", 4)) {
+        lookData lData = lookCheck(message);
+        if (lData.is_valid) {
+            look(tracker, &lData, socket_fd);
+            free_lookData(&lData);
+            return 0;
+        }
         free_lookData(&lData);
-        return 0;
-    }
-    free_lookData(&lData);
-    getfileData gfData = getfileCheck(message);
-    if (gfData.is_valid) {
-        // Handle data
-        return 0;
-    }
-    updateData uData = updateCheck(message);
-    if (uData.is_valid) {
-        // Handle data
+    } else if (streqlim(message, "getfile", 7)) {
+        getfileData gfData = getfileCheck(message);
+        if (gfData.is_valid) {
+            // Handle data
+            return 0;
+        }
+    } else if (streqlim(message, "update", 6)) {
+        updateData uData = updateCheck(message);
+        if (uData.is_valid) {
+            // Handle data
+            free_updateData(&uData);
+            return 0;
+        }
         free_updateData(&uData);
-        return 0;
     }
-    free_updateData(&uData);
     return 1;
 }
 
@@ -108,7 +110,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     }
     // memset(buffer, 0, 256);
     while (1) {
-        n += read(client_sockfd, buffer+n, 255);
+        n += read(client_sockfd, buffer + n, 255);
         if (n < 0) {
             error("ERROR reading from socket");
             break;
@@ -118,7 +120,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
             printf("Client disconnected\n");
             return;
         }
-        if (buffer[n-1] == '\n' || !strcmp(&buffer[n-2],"\r\n"))
+        if (buffer[n - 1] == '\n' || !strcmp(&buffer[n - 2], "\r\n"))
             break;
     }
 
@@ -132,7 +134,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     }
     struct sockaddr_in addr;
     socklen_t addr_size = sizeof(struct sockaddr_in);
-    getpeername(client_sockfd, (struct sockaddr *)&addr, &addr_size);
+    getpeername(client_sockfd, (struct sockaddr *) &addr, &addr_size);
     char clientip[MAX_IP_ADDR_SIZE];
     strcpy(clientip, inet_ntoa(addr.sin_addr));
     int port = ntohs(addr.sin_port);
@@ -143,7 +145,8 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     if (check == 1) { // Message mal formaté
         ++bad_attempts[index];
         if (bad_attempts[index] >= 3) {
-            printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion avec \033[0;33m%s:%d\033[39m.\033[39m\n", clientip, port);
+            printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion avec \033[0;33m%s:%d\033[39m.\033[39m\n",
+                   clientip, port);
             client_socket[index] = 0;
             close(client_sockfd);
             return;
@@ -253,7 +256,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < MAX_PEERS; i++) {
             sd = client_socket[i];
 
-            if (sd>0 && FD_ISSET(sd, &readfds)) {
+            if (sd > 0 && FD_ISSET(sd, &readfds)) {
                 // Soumettre la gestion de chaque nouvelle connexion au pool de threads
                 thpool_add_work(thpool, (void (*)(void *)) handle_client_connection, (void *) (intptr_t) sd);
 

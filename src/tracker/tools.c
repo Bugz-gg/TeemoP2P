@@ -19,6 +19,10 @@ int streq(const char *str1, const char *str2) {
     return !strcmp(str1, str2);
 }
 
+int streqlim(const char *str1, const char *str2, int n) {
+    return !strncmp(str1, str2, n);
+}
+
 regex_t *announce_regex() {
     static regex_t *regex = NULL;
     if (regex != NULL)
@@ -285,7 +289,7 @@ lookData lookCheck(char *message) {
             criterions[index].op = EQ;
         } else if (streq(criteria, ">=")) {
             criterions[index].op = GE;
-        } else if (streq(criteria, "<")) {
+        } else if (streq(criteria, ">")) {
             criterions[index].op = GT;
         } else if (streq(criteria, "!=")) {
             criterions[index].op = DI;

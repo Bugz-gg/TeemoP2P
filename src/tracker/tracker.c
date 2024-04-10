@@ -171,13 +171,14 @@ void look(Tracker *t, lookData *data, int socket_fd) {
             write(socket_fd, tmp_buffer, strlen(tmp_buffer));
         }
     }
-    if (files[t->nb_files - 1] != NULL) {
+    if (t->nb_files && files[t->nb_files - 1] != NULL) {
         sprintf(tmp_buffer, "%s %d %d %s", files[t->nb_files - 1]->name, files[t->nb_files - 1]->size,
                 files[t->nb_files - 1]->pieceSize, files[t->nb_files - 1]->key);
         write(socket_fd, tmp_buffer, strlen(tmp_buffer));
     }
 
     write(socket_fd, "]\n", 3);
+    free(files);
 }
 
 void remove_file(File *fs, File f, int *nb) {
@@ -193,67 +194,67 @@ void remove_file(File *fs, File f, int *nb) {
     }
 }
 
-void select_by_name(File *f, criterion *c) {
+void select_by_name(File **f, criterion *c) {
     switch (c->op) {
         case LT:
-            if (strcmp(f->name, c->value.value_str) >= 0)
-                f = NULL;
+            if (strcmp((*f)->name, c->value.value_str) >= 0)
+                *f = NULL;
             break;
         case LE:
-            if (strcmp(f->name, c->value.value_str) > 0)
-                f = NULL;
+            if (strcmp((*f)->name, c->value.value_str) > 0)
+                *f = NULL;
             break;
         case EQ:
-            if (strcmp(f->name, c->value.value_str))
-                f = NULL;
+            if (strcmp((*f)->name, c->value.value_str))
+                *f = NULL;
             break;
         case GE:
-            if (strcmp(f->name, c->value.value_str) < 0)
-                f = NULL;
+            if (strcmp((*f)->name, c->value.value_str) < 0)
+                *f = NULL;
             break;
         case GT:
-            if (strcmp(f->name, c->value.value_str) <= 0)
-                f = NULL;
+            if (strcmp((*f)->name, c->value.value_str) <= 0)
+                *f = NULL;
             break;
         case DI:
-            if (!strcmp(f->name, c->value.value_str))
-                f = NULL;
+            if (!strcmp((*f)->name, c->value.value_str))
+                *f = NULL;
             break;
         default:
             printf("UNRECOGNISED_OPERATOR ");
     }
 }
 
-void select_by_file_size(File *f, criterion *c) {
+void select_by_file_size(File **f, criterion *c) {
     switch (c->op) {
         case LT:
-            if (f->size >= c->value.value_int) {
-                f = NULL;
+            if ((*f)->size >= c->value.value_int) {
+                *f = NULL;
             }
             break;
         case LE:
-            if (f->size > c->value.value_int) {
-                f = NULL;
+            if ((*f)->size > c->value.value_int) {
+                *f = NULL;
             }
             break;
         case EQ:
-            if (f->size != c->value.value_int) {
-                f = NULL;
+            if ((*f)->size != c->value.value_int) {
+                *f = NULL;
             }
             break;
         case GE:
-            if (f->size < c->value.value_int) {
-                f = NULL;
+            if ((*f)->size < c->value.value_int) {
+                *f = NULL;
             }
             break;
         case GT:
-            if (f->size <= c->value.value_int) {
-                f = NULL;
+            if ((*f)->size <= c->value.value_int) {
+                *f = NULL;
             }
             break;
         case DI:
-            if (f->size == c->value.value_int) {
-                f = NULL;
+            if ((*f)->size == c->value.value_int) {
+                *f = NULL;
             }
             break;
         default:
@@ -268,10 +269,10 @@ void select_files(int nb_files, File **f, int nb_criterion, criterion *c) {
                 break;
             switch (c[j].criteria) {
                 case FILENAME:
-                    select_by_name(f[i], &c[j]);
+                    select_by_name(&f[i], &c[j]);
                     break;
                 case FILESIZE:
-                    select_by_file_size(f[i], &c[j]);
+                    select_by_file_size(&f[i], &c[j]);
                     break;
                 default:
                     printf("UNRECOGNISED_CRITERIA ");

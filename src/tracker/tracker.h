@@ -7,6 +7,8 @@ int new_id(Tracker *, char *, int);
 
 void announce(Tracker *, announceData *, char *, int);
 void look(Tracker *, lookData *, int);
+void getfile(Tracker *, getfileData *, int);
+void updatedata(Tracker *, updateData *, int);
 
 void select_files(int, File **, int, criterion *);
 

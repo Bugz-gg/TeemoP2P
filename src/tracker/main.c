@@ -81,7 +81,7 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
     } else if (streqlim(message, "getfile", 7)) {
         getfileData gfData = getfileCheck(message);
         if (gfData.is_valid) {
-            // Handle data
+        getfile(tracker, &gfData, socket_fd);
             return 0;
         }
     } else if (streqlim(message, "update", 6)) {

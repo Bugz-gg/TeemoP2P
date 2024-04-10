@@ -53,7 +53,7 @@ int new_id(Tracker *t, char *addr_ip, int port) {
     return new_id + 1;
 }
 
-File *getfile(Tracker *t, char *k) {
+File *findfile(Tracker *t, char *k) {
     for (int i = 0; i < t->nb_files; ++i) {
         if (streq(t->files[i]->key, k)) {
             return t->files[i];
@@ -93,7 +93,7 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
 
     File *file;
     for (int i = 0; i < d->nb_files; ++i) {
-        file = getfile(t, d->files[i].key); // Vérifie si le fichier est déjà enregistré.
+        file = findfile(t, d->files[i].key); // Vérifie si le fichier est déjà enregistré.
         if (file == NULL) { // Enregistre le fichier.
             if (t->alloc_files < t->nb_files + 1) { // Réalloue de la place si besoin.
                 t->alloc_files *= 2;
@@ -130,7 +130,7 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
     }
 
     for (int i = 0; i < d->nb_leech_keys; ++i) {
-        file = getfile(t, d->leechKeys[i]);
+        file = findfile(t, d->leechKeys[i]);
         if (file == NULL) {
             if (t->alloc_files < t->nb_files + 1) {
                 t->alloc_files *= 2;
@@ -159,10 +159,10 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
     write(socket_fd, "OK\n", 3);
 }
 
-void look(Tracker *t, lookData *data, int socket_fd) {
+void look(Tracker *t, lookData *d, int socket_fd) {
     File **files = malloc(t->nb_files * sizeof(void *));
     memcpy(files, t->files, t->nb_files * sizeof(void *));
-    select_files(t->nb_files, files, data->nb_criterions, data->criterions);
+    select_files(t->nb_files, files, d->nb_criterions, d->criterions);
     write(socket_fd, "list [", 6);
     int after_first = 0;
 
@@ -178,6 +178,27 @@ void look(Tracker *t, lookData *data, int socket_fd) {
 
     write(socket_fd, "]\n", 3);
     free(files);
+}
+
+void getfile(Tracker *t, getfileData *d, int socket_fd) {
+    File *file = findfile(t, d->key);
+    sprintf(tmp_buffer, "peers %s [", d->key);
+    write(socket_fd, tmp_buffer, strlen(tmp_buffer));
+    int after_first = 0;
+    if (file!=NULL) {
+        for (int i=0; i<file->nb_peers; ++i) {
+            if (after_first)
+                write(socket_fd, " ", 1);
+            sprintf(tmp_buffer, "%s:%d", file->peers[i]->addr_ip, file->peers[i]->num_port);
+            write(socket_fd, tmp_buffer, strlen(tmp_buffer));
+            after_first = 1;
+        }
+    }
+    write(socket_fd, "]\n", 3);
+}
+
+void updatedata(Tracker *t, updateData *d, int socket_fd) {
+
 }
 
 void remove_file(File *fs, File f, int *nb) {
@@ -295,7 +316,7 @@ Peer *select_peer(Tracker *t, int id) {
 }
 
 /*
-Peer * getfile(Tracker *t ,char * k ){
+Peer * findfile(Tracker *t ,char * k ){
     Peer * p=malloc(t->nb_peers * sizeof(Peer));
     int nb=0;
     for( int i=0;i<t->nb_files;i++){

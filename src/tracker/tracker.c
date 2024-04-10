@@ -164,17 +164,16 @@ void look(Tracker *t, lookData *data, int socket_fd) {
     memcpy(files, t->files, t->nb_files * sizeof(void *));
     select_files(t->nb_files, files, data->nb_criterions, data->criterions);
     write(socket_fd, "list [", 6);
+    int after_first = 0;
 
-    for (int i = 0; i < t->nb_files - 1; ++i) {
+    for (int i = 0; i < t->nb_files; ++i) {
         if (files[i] != NULL) {
-            sprintf(tmp_buffer, "%s %d %d %s ", files[i]->name, files[i]->size, files[i]->pieceSize, files[i]->key);
+            if (after_first)
+                write(socket_fd, " ", 1);
+            sprintf(tmp_buffer, "%s %d %d %s", files[i]->name, files[i]->size, files[i]->pieceSize, files[i]->key);
             write(socket_fd, tmp_buffer, strlen(tmp_buffer));
         }
-    }
-    if (t->nb_files && files[t->nb_files - 1] != NULL) {
-        sprintf(tmp_buffer, "%s %d %d %s", files[t->nb_files - 1]->name, files[t->nb_files - 1]->size,
-                files[t->nb_files - 1]->pieceSize, files[t->nb_files - 1]->key);
-        write(socket_fd, tmp_buffer, strlen(tmp_buffer));
+        after_first = 1;
     }
 
     write(socket_fd, "]\n", 3);
@@ -265,6 +264,8 @@ void select_by_file_size(File **f, criterion *c) {
 void select_files(int nb_files, File **f, int nb_criterion, criterion *c) {
     for (int i = 0; i < nb_files; ++i) {
         for (int j = 0; j < nb_criterion; ++j) {
+            if (f[i]->name[0]=='\0')
+                f[i] = NULL;
             if (f[i] == NULL) // Déjà éliminé par un critérion
                 break;
             switch (c[j].criteria) {

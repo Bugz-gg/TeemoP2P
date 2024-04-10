@@ -166,7 +166,8 @@ announceData announceCheck(char *message) {
     port_str[len_port] = '\0';
     int port = atoi(port_str);
 
-    char *filesData = strndup(message + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
+    char *filesData, *tofreefiles;
+    filesData = tofreefiles = strndup(message + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
     int count = countDelim(filesData);
 
     int nbFiles = count / 4;
@@ -175,7 +176,7 @@ announceData announceCheck(char *message) {
 
     int index = 0;
     int remainder;
-    while (token != NULL) {
+    while (token != NULL && *token != 0) {
         remainder = index % 4;
         if (!remainder) {
             strcpy(files[index / 4].name, token);
@@ -193,13 +194,14 @@ announceData announceCheck(char *message) {
 
     // leech
     int nb_leech_keys = 0;
-    char *leechData = strndup(message + matches[5].rm_so, matches[5].rm_eo - matches[5].rm_so);
+    char *leechData, *tofreeleech;
+    leechData = tofreeleech = strndup(message + matches[5].rm_so, matches[5].rm_eo - matches[5].rm_so);
     count = countDelim(leechData);
-    count += (count==0);
+    count += (!count && (matches[5].rm_eo - matches[5].rm_so));
     char **leechKeys = malloc(count * sizeof(char *));
     token = strsep(&leechData, DELIM);
     int leech_index = 0;
-    while (token != NULL) {
+    while (token != NULL && *token != 0) {
         leechKeys[leech_index] = malloc(33 * sizeof(char));
         strncpy(leechKeys[leech_index], token, 32);
         leechKeys[leech_index][32] = '\0';
@@ -215,8 +217,8 @@ announceData announceCheck(char *message) {
     announceStruct.leechKeys = leechKeys;
     announceStruct.is_valid = 1;
 
-    free(leechData);
-    free(filesData);
+    free(tofreeleech);
+    free(tofreefiles);
 
     return announceStruct;
 }
@@ -232,12 +234,13 @@ lookData lookCheck(char *message) {
         return lookStruct;
     }
 
-    char *criterions_str = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
+    char *criterions_str, *tofreecrit;
+    criterions_str = tofreecrit = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
     int count = countDelim(criterions_str);
-    count = count + (!count && (matches[1].rm_eo - matches[1].rm_so));
+    count += (!count && (matches[1].rm_eo - matches[1].rm_so));
     if (!count) {
         fprintf(stderr, "No criteria found in %s.\n", criterions_str);
-        free(criterions_str);
+        free(tofreecrit);
         return lookStruct;
     }
     regex_t *comp_regex = comparison_regex();
@@ -255,10 +258,11 @@ lookData lookCheck(char *message) {
 
     char criteria[25];
 
-    while (token != NULL) {
+    while (token != NULL && *token != 0) {
         if (regexec(comp_regex, token, 5, comparison_match, 0)) {
             fprintf(stderr, "(criterion) Message invalide :\033[0;33m%s\033[39m\n.\n", token);
             free(criterions);
+            free(tofreecrit);
             return lookStruct;
         }
 
@@ -273,7 +277,7 @@ lookData lookCheck(char *message) {
         } else {
             fprintf(stderr, "Incorrect criteria : %s.\n", criteria);
             free(criterions);
-            free(criterions_str);
+            free(tofreecrit);
             return lookStruct;
         }
 
@@ -295,7 +299,7 @@ lookData lookCheck(char *message) {
             criterions[index].op = DI;
         } else {
             free(criterions);
-            free(criterions_str);
+            free(tofreecrit);
             fprintf(stderr, "Incorrect operator : %s.\n", criteria);
             return lookStruct;
         }
@@ -320,7 +324,7 @@ lookData lookCheck(char *message) {
         // Check is the type is coherent with the criteria
         if (criterions[index].criteria == FILENAME && criterions[index].value_type != STR) {
             free(criterions);
-            free(criterions_str);
+            free(tofreecrit);
             fprintf(stderr, "Incorrect value type for filesize : %s.\n", value);
             return lookStruct;
         }
@@ -328,7 +332,7 @@ lookData lookCheck(char *message) {
         token = strsep(&criterions_str, DELIM);
         ++index;
     }
-    free(criterions_str);
+    free(tofreecrit);
 
     lookStruct.nb_criterions = count;
     lookStruct.criterions = criterions;
@@ -365,13 +369,14 @@ updateData updateCheck(char *message) {
     }
 
     int nb_keys = 0;
-    char *keyData = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
+    char *keyData, *tofreekey;
+    keyData = tofreekey = strndup(message + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
     int count = countDelim(keyData);
-    count += (count==0);
+    count += (!count && matches[1].rm_eo - matches[1].rm_so);
     char **keys = malloc(count * sizeof(char *));
     char *token = strsep(&keyData, DELIM);
     int key_index = 0;
-    while (token != NULL) {
+    while (token != NULL && *token != 0) {
         keys[key_index] = malloc(33 * sizeof(char));
         strncpy(keys[key_index], token, 32);
         keys[key_index][32] = '\0';
@@ -379,15 +384,16 @@ updateData updateCheck(char *message) {
         ++nb_keys;
         ++key_index;
     }
-    free(keyData);
+    free(tofreekey);
     int nb_leech_keys = 0;
-    char *leechData = strndup(message + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
+    char *leechData, *tofreeleech;
+    leechData = tofreeleech = strndup(message + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
     count = countDelim(leechData);
     count += (count==0);
     char **leechKeys = malloc(count * sizeof(char *));
     token = strsep(&leechData, DELIM);
     int leech_index = 0;
-    while (token != NULL) {
+    while (token != NULL && *token != 0) {
         leechKeys[leech_index] = malloc(33 * sizeof(char));
         strncpy(leechKeys[leech_index], token, 32);
         leechKeys[leech_index][32] = '\0';
@@ -395,7 +401,7 @@ updateData updateCheck(char *message) {
         ++nb_leech_keys;
         ++leech_index;
     }
-    free(leechData);
+    free(tofreeleech);
     updateStruct.is_valid = 1;
     updateStruct.nb_keys = nb_keys;
     updateStruct.keys = keys;

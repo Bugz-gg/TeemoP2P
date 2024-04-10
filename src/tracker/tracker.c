@@ -70,7 +70,7 @@ Peer *getpeer(Peer **peers, int nb_peers, char *IP, int port) {
     return NULL;
 }
 
-void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
+Peer *announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
     Peer *peer = getpeer(t->peers, t->nb_peers, addr_ip, d->port); // Vérifie si le peer a déjà communiqué.
     if (peer == NULL) { // Enregistre le peer.
         if (t->nb_peers + 1 > t->alloc_peers) { // Réalloue de la place dans t->peers
@@ -157,6 +157,7 @@ void announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
     }
 
     write(socket_fd, "OK\n", 3);
+    return peer;
 }
 
 void look(Tracker *t, lookData *d, int socket_fd) {

@@ -31,6 +31,7 @@ static sig_t old_handler;
 static int sockfd;
 int client_socket[MAX_PEERS] = {0};
 int bad_attempts[MAX_PEERS] = {0};
+Peer *connected_peers[MAX_PEERS];
 
 void close_on_exit(int signo) {
     thpool_destroy(thpool);
@@ -55,7 +56,7 @@ void error(char *msg) {
     exit(1);
 }
 
-int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd) {
+int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd, int index) {
     if (streq(message, "ping")) {
         write(socket_fd, "pong\n", 5);
         return 0;
@@ -63,7 +64,7 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
     if (streqlim(message, "announce", 8)) {
         announceData aData = announceCheck(message);
         if (aData.is_valid) {
-            announce(tracker, &aData, addr_ip, socket_fd);
+            connected_peers[index] = announce(tracker, &aData, addr_ip, socket_fd);
             free_announceData(&aData);
             print_tracker_files(tracker);
             print_tracker_peers(tracker);
@@ -141,7 +142,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     printf("Message reçu de \033[0;33m%s:%d\033[39m: %s\n", clientip, port, buffer);
 
     // Vérifie si le message est bien formaté
-    int check = handle_message(buffer, &tracker, clientip, client_sockfd); // Replace NULL by addr_ip
+    int check = handle_message(buffer, &tracker, clientip, client_sockfd, index); // Replace NULL by addr_ip
     if (check == 1) { // Message mal formaté
         ++bad_attempts[index];
         if (bad_attempts[index] >= 3) {
@@ -178,6 +179,8 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in serv_addr, cli_addr;
 
     init_tracker(&tracker);
+    for (int i=0; i<MAX_PEERS; ++i)
+        connected_peers[i] = NULL;
 
     // Initialiser le pool de threads
     thpool = thpool_init(NB_THREADS);

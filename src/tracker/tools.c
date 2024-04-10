@@ -93,7 +93,7 @@ regex_t *update_regex() {
 }
 
 void free_peer(Peer *peer) {
-    ; //free(peer->addr_ip);
+    //free(peer->addr_ip);
     free(peer);
 }
 
@@ -171,7 +171,7 @@ announceData announceCheck(char *message) {
 
     int nbFiles = count / 4;
     File *files = malloc(nbFiles * sizeof(File));
-    char *token = strtok(filesData, DELIM);
+    char *token = strsep(&filesData, DELIM);
 
     int index = 0;
     int remainder;
@@ -187,7 +187,7 @@ announceData announceCheck(char *message) {
         } else {
             strcpy(files[index / 4].key, token);
         }
-        token = strtok(NULL, DELIM);
+        token = strsep(&filesData, DELIM);
         ++index;
     }
 
@@ -197,13 +197,13 @@ announceData announceCheck(char *message) {
     count = countDelim(leechData);
     count += (count==0);
     char **leechKeys = malloc(count * sizeof(char *));
-    token = strtok(leechData, DELIM);
+    token = strsep(&leechData, DELIM);
     int leech_index = 0;
     while (token != NULL) {
         leechKeys[leech_index] = malloc(33 * sizeof(char));
         strncpy(leechKeys[leech_index], token, 32);
         leechKeys[leech_index][32] = '\0';
-        token = strtok(NULL, DELIM);
+        token = strsep(&leechData, DELIM);
         ++nb_leech_keys;
         ++leech_index;
     }
@@ -244,7 +244,7 @@ lookData lookCheck(char *message) {
     regmatch_t comparison_match[5];
 
     criterion *criterions = malloc(count * sizeof(criterion));
-    char *token = strtok(criterions_str, DELIM);
+    char *token = strsep(&criterions_str, DELIM);
 
     char *endptr;
     int int_val;
@@ -325,7 +325,7 @@ lookData lookCheck(char *message) {
             return lookStruct;
         }
 
-        token = strtok(NULL, DELIM);
+        token = strsep(&criterions_str, DELIM);
         ++index;
     }
     free(criterions_str);
@@ -369,13 +369,13 @@ updateData updateCheck(char *message) {
     int count = countDelim(keyData);
     count += (count==0);
     char **keys = malloc(count * sizeof(char *));
-    char *token = strtok(keyData, DELIM);
+    char *token = strsep(&keyData, DELIM);
     int key_index = 0;
     while (token != NULL) {
         keys[key_index] = malloc(33 * sizeof(char));
         strncpy(keys[key_index], token, 32);
         keys[key_index][32] = '\0';
-        token = strtok(NULL, DELIM);
+        token = strsep(&keyData, DELIM);
         ++nb_keys;
         ++key_index;
     }
@@ -385,13 +385,13 @@ updateData updateCheck(char *message) {
     count = countDelim(leechData);
     count += (count==0);
     char **leechKeys = malloc(count * sizeof(char *));
-    token = strtok(leechData, DELIM);
+    token = strsep(&leechData, DELIM);
     int leech_index = 0;
     while (token != NULL) {
         leechKeys[leech_index] = malloc(33 * sizeof(char));
         strncpy(leechKeys[leech_index], token, 32);
         leechKeys[leech_index][32] = '\0';
-        token = strtok(NULL, DELIM);
+        token = strsep(&leechData, DELIM);
         ++nb_leech_keys;
         ++leech_index;
     }

@@ -227,7 +227,7 @@ func DataCheck(message string) (bool, DataData) {
 				//return false, DataData{}
 				continue
 			}
-			if len(piece[1]) != piecesize {
+			if len(piece[1]) != piecesize*8 {
 				fmt.Println("Wrong piece size received.")
 				return false, DataData{}
 			}

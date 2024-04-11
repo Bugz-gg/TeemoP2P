@@ -115,13 +115,13 @@ func TestData(t *testing.T) {
 	}
 
 	// Out of range piece index
-	success3, dataData3 := tools.DataCheck("data Uizhsja8hzUizhsja8hzUizhsja8hzsu [0:01 893:10 88:10]")
+	success3, dataData3 := tools.DataCheck("data Uizhsja8hzUizhsja8hzUizhsja8hzsu [0:0101101101101010 893:1010011001100110 88:1011110010101010]")
 	if success2 || !tools.DataCmp(dataData3, expectedDataData) {
 		t.Errorf("DataCheck failed. Expected: false %v, Got: %v %v", expectedDataData, success3, dataData3)
 	}
 
 	// Correct
-	success4, dataData4 := tools.DataCheck("data Uizhsja8hzpolisja8hzUizhsja8hzsu [0:101 5:010]")
+	success4, dataData4 := tools.DataCheck("data Uizhsja8hzpolisja8hzUizhsja8hzsu [0:101101101101101101101101 5:010101101101101101101101101]")
 	expectedDataData4 := tools.DataData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []tools.Piece{{Data: tools.Data{Length: 3, BitSequence: []byte{160}}}, {Index: 5, Data: tools.Data{Length: 3, BitSequence: []byte{64}}}}}
 	if !success4 || !tools.DataCmp(dataData4, expectedDataData4) {
 		t.Errorf("DataCheck failed. Expected: true %v, Got: %v %v", expectedDataData4, success4, dataData4)

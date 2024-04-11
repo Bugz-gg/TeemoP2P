@@ -121,10 +121,17 @@ func TestData(t *testing.T) {
 	}
 
 	// Correct
-	success4, dataData4 := tools.DataCheck("data Uizhsja8hzpolisja8hzUizhsja8hzsu [0:101101101101101101101101 5:010101101101101101101101101]")
-	expectedDataData4 := tools.DataData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []tools.Piece{{Data: tools.Data{Length: 3, BitSequence: []byte{160}}}, {Index: 5, Data: tools.Data{Length: 3, BitSequence: []byte{64}}}}}
+	success4, dataData4 := tools.DataCheck("data Uizhsja8hzpolisja8hzUizhsja8hzsu [0:101101101101101101101101 5:010101101101101101101101]")
+	expectedDataData4 := tools.DataData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []tools.Piece{{Index: 0, Data: tools.Data{Length: 3, BitSequence: []byte{182, 219, 109}}}, {Index: 5, Data: tools.Data{Length: 3, BitSequence: []byte{86, 219, 109}}}}}
 	if !success4 || !tools.DataCmp(dataData4, expectedDataData4) {
 		t.Errorf("DataCheck failed. Expected: true %v, Got: %v %v", expectedDataData4, success4, dataData4)
+	}
+
+	// Correct
+	success5, dataData5 := tools.DataCheck("data Uizhsja8hzpolisja8hzUizhsja8hzsu [0:101101101101101101101101]")
+	expectedDataData5 := tools.DataData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []tools.Piece{{Index: 0, Data: tools.Data{Length: 3, BitSequence: []byte{182, 219, 109}}}}}
+	if !success4 || !tools.DataCmp(dataData5, expectedDataData5) {
+		t.Errorf("DataCheck failed. Expected: true %v, Got: %v %v", expectedDataData5, success5, dataData5)
 	}
 }
 

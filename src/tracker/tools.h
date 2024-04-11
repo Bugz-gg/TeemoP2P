@@ -8,7 +8,8 @@
 #define DELIM " "
 #define PORT_MAX_LENGTH 5
 
-int streq(char *, char *);
+int streq(const char *, const char *);
+int streqlim(const char *, const char *, int);
 
 regex_t *announce_regex();
 regex_t *look_regex();

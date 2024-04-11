@@ -2,8 +2,8 @@
 #define STRUCTS_H
 #define MAX_FILE_NAME_SIZE 50
 #define MAX_IP_ADDR_SIZE 17
-#define ALLOC_PEERS 50
 #define ALLOC_FILES 100
+#define ALLOC_PEERS 200
 
 
 enum criterias {
@@ -27,7 +27,8 @@ typedef struct {
     int pieceSize;
     char key[33];
     int nb_peers;
-    Peer *peers;
+    int alloc_peers;
+    Peer **peers;
     char name[MAX_FILE_NAME_SIZE];
 } File;
 
@@ -71,7 +72,7 @@ typedef struct {
 } updateData;
 
 typedef struct {
-    Peer *peers;
+    Peer **peers;
     File **files;
     int nb_files;
     int nb_peers;

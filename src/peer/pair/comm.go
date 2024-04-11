@@ -56,15 +56,15 @@ func WriteReadConnection(conn net.Conn, p *Peer) {
 	}
 	conn.Write([]byte(message))
 
-	buffer := make([]byte, 256)
+	buffer := make([]byte, 1000)
 	fd, nerr := conn.Read(buffer)
 	errorCheck(nerr)
 	if fd > 0 {
-		mess := string(buffer[:])
-		mess = strings.Split(mess, "\n")[0]
+		mess := string(buffer[:fd])
 		input := strings.Split(mess, " ")[0]
 		switch input {
 		case "data", "data\n":
+			fmt.Printf("%s\n", mess)
 			valid, data := tools.DataCheck(mess)
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ": > ", mess)

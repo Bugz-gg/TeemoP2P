@@ -60,7 +60,7 @@ func StringToData(str string) Data {
 			ByteArrayWrite(&array, index)
 		}
 	}
-	return Data{Length: len(str), BitSequence: array}
+	return Data{Length: len(str) / 8, BitSequence: array}
 }
 
 // BufferMapToString transforms a BufferMap into a string of `0` and `1`.

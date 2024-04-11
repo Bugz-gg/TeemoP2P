@@ -53,6 +53,7 @@ func TestHave(t *testing.T) {
 
 	success, haveData := tools.HaveCheck("have Uizhsja8hzUizhsja8hzU7zhsja8hzsu 010010101001")
 	expectedHaveData := tools.HaveData{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", BufferMap: tools.LocalFiles["Uizhsja8hzUizhsja8hzU7zhsja8hzsu"].BufferMap}
+	// fmt.Println("TESTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO", tools.BufferMapToString(expectedHaveData.BufferMap))
 	if !success || !tools.HaveCmp(haveData, expectedHaveData) {
 		t.Errorf("HaveCheck failed. Expected: true %v, Got: %v %v", expectedHaveData, success, haveData)
 	}

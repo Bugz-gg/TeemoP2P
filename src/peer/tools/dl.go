@@ -3,6 +3,7 @@ package tools
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,9 +12,9 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-func FillStructFromConfig() []File {
-	path, err := readConfigFile()
-	if err != nil {
+func FillFilesFromConfig() map[string]*File {
+	path := GetValueFromConfig("Peer", "path")
+	if path == "" {
 		return nil
 	}
 
@@ -23,18 +24,6 @@ func FillStructFromConfig() []File {
 	}
 
 	return fillStruct(files)
-}
-
-func readConfigFile() (string, error) {
-	file, err := ini.Load("config.ini")
-	if err != nil {
-		return "", err
-	}
-
-	section := file.Section("Peer")
-	path := section.Key("path").String()
-
-	return path, nil
 }
 
 func searchFiles(path string) ([]string, error) {
@@ -54,8 +43,8 @@ func searchFiles(path string) ([]string, error) {
 	return files, nil
 }
 
-func fillStruct(files []string) []File {
-	var result []File
+func fillStruct(files []string) map[string]*File {
+	result := make(map[string]*File)
 	for _, filePath := range files {
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
@@ -63,16 +52,10 @@ func fillStruct(files []string) []File {
 		}
 
 		fileSize := fileInfo.Size()
-		file, err := ini.Load("config.ini")
-		if err != nil {
-			return nil
-		}
-		section := file.Section("Peer")
-
-		pieceSizeStr := section.Key(filepath.Base(filePath)).String()
+		pieceSizeStr := GetValueFromConfig("Peer", filepath.Base(filePath))
 		pieceSize, err := strconv.Atoi(pieceSizeStr)
 		if err != nil {
-			pieceSizeStr = section.Key("length_piece_default").String()
+			pieceSizeStr = GetValueFromConfig("Peer", "length_piece_default")
 			pieceSize, err = strconv.Atoi(pieceSizeStr)
 			if err != nil {
 				return nil
@@ -85,9 +68,26 @@ func fillStruct(files []string) []File {
 			PieceSize: pieceSize,
 			Key:       GetMD5Hash(filePath),
 		}
-		result = append(result, fil)
+		InitBufferMap(&fil)
+		for u := range fil.BufferMap.Length {
+			BufferMapWrite(&fil.BufferMap, u)
+		}
+		// fmt.Println(fil.BufferMap)
+		result[fil.Key] = &fil
 	}
 	return result
+}
+
+func GetValueFromConfig(section string, key string) string {
+	file, err := ini.Load("config.ini")
+	if err != nil {
+		return err.Error()
+	}
+	sec := file.Section(section)
+
+	pieceSizeStr := sec.Key(key)
+	return pieceSizeStr.String()
+
 }
 
 func GetMD5Hash(filePath string) string {

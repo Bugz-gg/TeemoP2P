@@ -9,6 +9,7 @@ import (
 
 // LocalFiles A map to store local files' data.
 var LocalFiles = map[string]*File{} // Supposing no collision will happen during the project
+
 // RemoteFiles A map to store remote files' data.
 var RemoteFiles = map[string]*File{} // Supposing no collision will happen during the project
 
@@ -240,6 +241,7 @@ func DataCheck(message string) (bool, DataData) {
 		}
 		return true, DataData{Key: match[1], Pieces: pieces}
 	}
+	fmt.Println("Data regex false")
 	return false, DataData{}
 }
 

@@ -64,7 +64,14 @@ func StringToData(str string) Data {
 }
 
 // BufferMapToString transforms a BufferMap into a string of `0` and `1`.
-func BufferMapToString(bufferMap BufferMap) {
+func BufferMapToString(bufferMap BufferMap) string {
+	var buf bytes.Buffer
+	for _, b := range bufferMap.BitSequence {
+		binary := strconv.FormatInt(int64(b), 2)
+		paddedBinary := fmt.Sprintf("%08s", binary)
+		buf.WriteString(paddedBinary)
+	}
+	return buf.String()[:bufferMap.Length]
 
 }
 

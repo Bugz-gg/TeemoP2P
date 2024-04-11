@@ -32,7 +32,7 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 		}
 		switch action {
 		case "handle":
-			peer.WriteReadConnection(MyPeer.Comm[input[0]+":"+input[1]])
+			peer.WriteReadConnection(MyPeer.Comm["127.0.0.1"+":"+input[1]], MyPeer)
 		case "close":
 			MyPeer.Close(input[0] + ":" + input[1])
 		default:
@@ -60,24 +60,28 @@ func inputProg() {
 					MyPeer = peer.StartPeer("localhost", "3000", "online")
 				} else if len(input) >= 2 {
 					MyPeer = peer.StartPeer(input[0], input[1], "online")
+				} else if len(input) == 1 {
+					MyPeer = peer.StartPeer("localhost", input[0], "online")
 				} else {
 					fmt.Println("Missing a field.")
 				}
-			case "connect":
+			case "co", "connect":
 				if !MyPeer.IsEmpty() {
 					fmt.Print("Enter the IP and port of peer you want to connect to: ")
 					input := readInput()
 					if len(input) == 2 {
 						MyPeer.ConnectTo(input[0], input[1])
+					} else if len(input) == 1 {
+						MyPeer.ConnectTo("localhost", input[0])
 					} else {
 						fmt.Println("Invalid input.")
 					}
 				} else {
 					fmt.Println("You need to launch a peer first.")
 				}
-			case "handle":
+			case "hd", "handle":
 				handlePeer(&MyPeer, "handle")
-			case "close":
+			case "cl", "close":
 				handlePeer(&MyPeer, "close")
 			case "exit":
 				fmt.Println("Ending the program :(")

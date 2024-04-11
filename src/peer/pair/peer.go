@@ -15,7 +15,7 @@ type Peer struct {
 	Port   string
 	Status string
 	Type   string
-	Files  []tools.File
+	Files  map[string]*tools.File
 	Comm   map[string]net.Conn
 }
 
@@ -29,7 +29,7 @@ func (p *Peer) IsEmpty() bool {
 func errorCheck(err error) {
 	if err != nil {
 		fmt.Println("Error:", err)
-		panic(err)
+		// panic(err)
 	}
 }
 
@@ -46,15 +46,20 @@ func GetConfig() Peer {
 	return track
 }
 
+// TODO : Regarder si il faut pas utiliser la fonction de dl.go.
 func StartPeer(IP string, Port string, Type string) Peer {
 	track := GetConfig()
 	peer := Peer{
 		IP:    IP,
 		Port:  Port,
 		Type:  Type,
-		Files: tools.FillStructFromConfig(),
+		Files: make(map[string]*tools.File),
 		Comm:  make(map[string]net.Conn),
 	}
+	peer.Files = tools.FillFilesFromConfig()
+	tools.LocalFiles = peer.Files // TODO : Change this.
+	tools.RemoteFiles = peer.Files
+	// fmt.Println(peer.Files, peer.Files["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap, tools.LocalFiles["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap, tools.RemoteFiles["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap)
 	go peer.startListening()
 	time.Sleep(time.Second)
 	peer.HelloTrack(track)

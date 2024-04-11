@@ -91,9 +91,9 @@ func worker(jobs chan Job, p *Peer) {
 					_, err := fdf.Seek(int64(piece*p.Files[data.Key].PieceSize), 0)
 					errorCheck(err)
 					// tempBuff := make([]byte, p.Files[data.Key].PieceSize)
-					tempBuff := tools.BufferMap{Length: tools.BufferBitSize(*p.Files[data.Key]), BitSequence: make([]byte, tools.BufferBitSize(*p.Files[data.Key]))}
-					fdf.Read(tempBuff.BitSequence)
-					response += strconv.Itoa(piece) + ":" + tools.BufferMapToString(tempBuff) + " "
+					tempBuff := make([]byte, p.Files[data.Key].PieceSize)
+					fdf.Read(tempBuff)
+					response += strconv.Itoa(piece) + ":" + string(tempBuff) + " "
 				}
 				response = strings.TrimSuffix(response, " ")
 				response += "]"

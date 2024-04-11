@@ -50,10 +50,10 @@ func WriteReadConnection(conn net.Conn, p *Peer) {
 	if message == "exit\n" {
 		os.Exit(1)
 	}
-	max_pieces := 0
+	/*max_pieces := 0
 	if temp := strings.Split(message, "[")[1]; len(temp) > 1 {
 		max_pieces = len(temp) - 1
-	}
+	}*/
 	conn.Write([]byte(message))
 
 	buffer := make([]byte, 1000)
@@ -81,7 +81,7 @@ func WriteReadConnection(conn net.Conn, p *Peer) {
 				errorCheck(err)
 				fdc, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/log"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
 				errorCheck(err)
-				for i := 0; max_pieces > i; i++ {
+				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)
 					errorCheck(err)
 					fdf.Write(data.Pieces[i].Data.BitSequence)

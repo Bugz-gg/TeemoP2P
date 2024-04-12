@@ -239,11 +239,11 @@ int main(int argc, char *argv[]) {
             printf("New connection, socket fd: %d, \033[0;33m%s:%d\033[39m.\033[39m \n", newsockfd,
                    inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
 
-            char *message = "ECHO Daemon v1.0 \r\n";
+            /*char *message = "ECHO Daemon v1.0 \r\n";
             // Send new connection greeting message
             if (send(newsockfd, message, strlen(message), 0) != strlen(message)) {
                 perror("send");
-            }
+            }*/
 
             // Add new socket to array of sockets
             for (int i = 0; i < MAX_PEERS; ++i) {

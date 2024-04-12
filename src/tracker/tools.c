@@ -28,7 +28,7 @@ regex_t *announce_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^announce listen ([0-9]+) seed \\[(([a-zA-Z0-9]+ [0-9]+ [0-9]+ [a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
+    char *pattern = "^announce listen ([0-9]+) seed \\[((.+ [0-9]+ [0-9]+ [a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
     if (regcomp(regex, pattern, REG_EXTENDED)) {
         fprintf(stderr, "Failed to compile `announce` regular expression\n");
     }

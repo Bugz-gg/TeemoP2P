@@ -195,7 +195,7 @@ void getfile(Tracker *t, getfileData *d, int socket_fd) {
             after_first = 1;
         }
     }
-    write(socket_fd, "]\n", 3);
+    write(socket_fd, "]\n", 2);
 }
 
 void updatedata(Tracker *t, updateData *d, int socket_fd) {

@@ -173,8 +173,8 @@ void look(Tracker *t, lookData *d, int socket_fd) {
                 write(socket_fd, " ", 1);
             sprintf(tmp_buffer, "%s %d %d %s", files[i]->name, files[i]->size, files[i]->pieceSize, files[i]->key);
             write(socket_fd, tmp_buffer, strlen(tmp_buffer));
+            after_first = 1;
         }
-        after_first = 1;
     }
 
     write(socket_fd, "]\n", 3);

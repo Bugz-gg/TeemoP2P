@@ -241,6 +241,9 @@ lookData lookCheck(char *message) {
     if (!count) {
         fprintf(stderr, "No criteria found in %s.\n", criterions_str);
         free(tofreecrit);
+        lookStruct.nb_criterions = 0;
+        lookStruct.criterions = NULL;
+        lookStruct.is_valid = 1;
         return lookStruct;
     }
     regex_t *comp_regex = comparison_regex();

@@ -46,7 +46,7 @@ var ListRegex = ListRegexGen()
 
 // InterestedRegexGen provides the function that returns the compiled regex expression for the `interested` message.
 func InterestedRegexGen() (InterestedRegex func() *regexp.Regexp) {
-	interestedPattern := `^interested (?<key>[a-zA-Z0-9]{32})$` // Add optional leech if necessary
+	interestedPattern := `^interested ([a-zA-Z0-9]{32})$` // Add optional leech if necessary
 	interestedRegex := regexp.MustCompile(interestedPattern)
 	return func() *regexp.Regexp {
 		return interestedRegex

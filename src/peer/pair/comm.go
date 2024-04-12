@@ -34,7 +34,7 @@ func (p *Peer) HelloTrack(t Peer) {
 	n, err := conn.Read(buffer)
 	errorCheck(err)
 	fmt.Print("< ", string(buffer[:n]))
-	p.Comm["tracker"] = conn
+	p.Comm[conn.RemoteAddr().String()] = conn
 }
 
 // TODO : Remote file stockage lors d une demande au tracker
@@ -98,23 +98,23 @@ func WriteReadConnection(conn net.Conn, p *Peer) {
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ": > ", mess)
 			} else {
-				fmt.Println("Invalid data response...")
+				fmt.Println("Invalid have response...")
 			}
-		case "ok", "ok\n":
+		case "OK", "OK\n":
 			fmt.Println(conn.RemoteAddr(), ": > ", mess)
 		case "list", "list\n":
 			valid, _ := tools.ListCheck(mess)
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ": > ", mess)
 			} else {
-				fmt.Println("Invalid data response...")
+				fmt.Println("Invalid list response...")
 			}
 		case "peers", "peers\n":
 			valid, _ := tools.PeersCheck(mess)
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ": > ", mess)
 			} else {
-				fmt.Println("Invalid data response...")
+				fmt.Println("Invalid peers response...")
 			}
 		case "Invalid command you have no tries remaining, connection is closed...":
 			p.Close(conn.RemoteAddr().String())

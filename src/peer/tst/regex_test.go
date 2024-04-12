@@ -17,11 +17,18 @@ func TestList(t *testing.T) {
 	tools.BufferMapWrite(&dummyFile.BufferMap, 0)
 	tools.BufferMapWrite(&dummyFile.BufferMap, 5)
 
-	success, listData := tools.ListCheck("list [fe 12 1 Uizhsja8hzUizhsja8hzUizhsja8hzsu]")
-	expectedListData := tools.ListData{Files: []tools.File{{Name: "fe", Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}}}
+	success, listData := tools.ListCheck("list [f.e 12 1 Uizhsja8hzUizhsja8hzUizhsja8hzsu]")
+	expectedListData := tools.ListData{Files: []tools.File{{Name: "f.e", Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}}}
 	tools.InitBufferMap(&(expectedListData.Files[0]))
 	if !success || !tools.ListDataCmp(listData, expectedListData) {
 		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData, success, listData)
+	}
+
+	success2, listData2 := tools.ListCheck("list [etoausk 22 2 df833476b1fbb8aa113c14d5a9421180]")
+	expectedListData2 := tools.ListData{Files: []tools.File{{Name: "etoausk", Size: 22, PieceSize: 2, Key: "df833476b1fbb8aa113c14d5a9421180"}}}
+	tools.InitBufferMap(&(expectedListData2.Files[0]))
+	if !success || !tools.ListDataCmp(listData2, expectedListData2) {
+		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData2, success2, listData2)
 	}
 }
 
@@ -76,10 +83,11 @@ func TestGetPieces(t *testing.T) {
 	if success || !tools.GetPiecesCmp(getPiecesData, expectedGetPiecesData) {
 		t.Errorf("GetPiecesCheck failed. Expected: false %v, Got: %v %v", expectedGetPiecesData, success, getPiecesData)
 	}
-
+	fmt.Print(&dummyFile3.BufferMap)
 	success2, getPiecesData2 := tools.GetPiecesCheck("getpieces Uizhsja8hzUizhsja8hzUizhsja8hzsu [0 893 88]")
-	if success2 || !tools.GetPiecesCmp(getPiecesData2, expectedGetPiecesData) {
-		t.Errorf("GetPiecesCheck failed. Expected: false %v, Got: %v %v", expectedGetPiecesData, success2, getPiecesData2)
+	expectedGetPiecesData2 := tools.GetPiecesData{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu", Pieces: []int{0}}
+	if !success2 || !tools.GetPiecesCmp(getPiecesData2, expectedGetPiecesData2) {
+		t.Errorf("GetPiecesCheck failed. Expected: true %v, Got: %v %v", expectedGetPiecesData2, success2, getPiecesData2)
 	}
 
 	success3, getPiecesData3 := tools.GetPiecesCheck("getpieces Uizhsja8hzpolisja8hzUizhsja8hzsu [0 5]")

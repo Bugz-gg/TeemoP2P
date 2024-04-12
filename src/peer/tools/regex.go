@@ -184,12 +184,14 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 			fmt.Println("No such file locally.")
 			return false, GetPiecesData{}
 		}
-		pieces := Map(strings.Split(match[2], " "), func(item string) int { i, _ := strconv.Atoi(item); return i })
+		wantedPieces := Map(strings.Split(match[2], " "), func(item string) int { i, _ := strconv.Atoi(item); return i })
 		file := LocalFiles[match[1]]
-		for _, i := range pieces {
-			if i >= BufferBitSize(*file) || !ByteArrayCheck(file.BufferMap.BitSequence, i) {
+		var pieces []int
+		for _, i := range wantedPieces {
+			if i < BufferBitSize(*file) && ByteArrayCheck(file.BufferMap.BitSequence, i) {
+				pieces = append(pieces, i)
+			} else {
 				fmt.Println("Invalid pieces' numbers :", i)
-				return false, GetPiecesData{}
 			}
 		}
 		return true, GetPiecesData{Key: match[1], Pieces: pieces}

@@ -177,7 +177,7 @@ void look(Tracker *t, lookData *d, int socket_fd) {
         }
     }
 
-    write(socket_fd, "]\n", 3);
+    write(socket_fd, "]\n", 2);
     free(files);
 }
 

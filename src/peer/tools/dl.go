@@ -3,6 +3,7 @@ package tools
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -71,7 +72,7 @@ func fillStruct(files []string) map[string]*File {
 		for u := range fil.BufferMap.Length {
 			BufferMapWrite(&fil.BufferMap, u)
 		}
-		// fmt.Println(fil.BufferMap)
+		fmt.Println(fil.BufferMap)
 		result[fil.Key] = &fil
 	}
 	return result

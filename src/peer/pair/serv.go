@@ -54,7 +54,7 @@ func worker(jobs chan Job, p *Peer) {
 			fmt.Println(valid)
 			if valid {
 				// fmt.Println("in if")
-				file := tools.LocalFiles[data.Key]
+				file := p.Files[data.Key]
 				buff := "have " + data.Key + " " + tools.BufferMapToString(file.BufferMap)
 				fmt.Print(conn.LocalAddr(), "> ", buff)
 				_, err := conn.Write([]byte(buff))

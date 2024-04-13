@@ -8,10 +8,12 @@ import (
 )
 
 // LocalFiles A map to store local files' data.
-var LocalFiles = map[string]*File{} // Supposing no collision will happen during the project
+var LocalFiles *map[string]*File // Supposing no collision will happen during the project
 
 // RemoteFiles A map to store remote files' data.
 var RemoteFiles = map[string]*File{} // Supposing no collision will happen during the project
+
+var RemotePeerFiles map[string]PeersData
 
 // AddFile adds a file to a map. (LocalFiles and RemoteFiles in this project.)
 func AddFile(fileMap map[string]*File, file *File) {
@@ -140,7 +142,7 @@ func ListCheck(message string) (bool, ListData) {
 // InterestedCheck checks the format of a `interested` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func InterestedCheck(message string) (bool, InterestedData) {
 	if match := InterestedRegex().FindStringSubmatch(message); match != nil {
-		if _, valid := LocalFiles[match[1]]; !valid {
+		if _, valid := (*LocalFiles)[match[1]]; !valid {
 			fmt.Println("No such file locally.")
 			return false, InterestedData{}
 		}
@@ -158,11 +160,11 @@ func HaveCheck(message string) (bool, HaveData) {
 		}
 		//file := RemoteFiles[match[1]]
 
-		if _, valid := LocalFiles[match[1]]; !valid {
+		if _, valid := (*LocalFiles)[match[1]]; !valid {
 			fmt.Println("No such file locally.")
 			return false, HaveData{}
 		}
-		file := LocalFiles[match[1]]
+		file := (*LocalFiles)[match[1]]
 		//file = &File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
 		if len(buffer) != BufferBitSize(*file) {
 			return false, HaveData{}
@@ -180,12 +182,12 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 			fmt.Println("No piece requested.")
 			return false, GetPiecesData{}
 		}
-		if _, valid := LocalFiles[match[1]]; !valid {
+		if _, valid := (*LocalFiles)[match[1]]; !valid {
 			fmt.Println("No such file locally.")
 			return false, GetPiecesData{}
 		}
 		pieces := Map(strings.Split(match[2], " "), func(item string) int { i, _ := strconv.Atoi(item); return i })
-		file := LocalFiles[match[1]]
+		file := (*LocalFiles)[match[1]]
 		for _, i := range pieces {
 			if i >= BufferBitSize(*file) || !ByteArrayCheck(file.BufferMap.BitSequence, i) {
 				fmt.Println("Invalid pieces' numbers :", i)
@@ -205,14 +207,14 @@ func DataCheck(message string) (bool, DataData) {
 			fmt.Println("No piece given.")
 			return false, DataData{}
 		}
-		if _, valid := LocalFiles[match[1]]; !valid { // If we don't have any piece of the requested file yet.
+		if _, valid := (*LocalFiles)[match[1]]; !valid { // If we don't have any piece of the requested file yet.
 			rFile := RemoteFiles[match[1]]
-			LocalFiles[match[1]] = &File{Name: rFile.Name, Size: rFile.Size, PieceSize: rFile.PieceSize, Key: match[1]}
-			InitBufferMap(LocalFiles[match[1]])
+			(*LocalFiles)[match[1]] = &File{Name: rFile.Name, Size: rFile.Size, PieceSize: rFile.PieceSize, Key: match[1]}
+			InitBufferMap((*LocalFiles)[match[1]])
 		}
 		piecesdata := strings.Split(match[2], " ")
 
-		file := LocalFiles[match[1]]
+		file := (*LocalFiles)[match[1]]
 		piecesize := file.PieceSize
 		pieces := make([]Piece, len(piecesdata))
 		for i, data := range piecesdata {
@@ -246,12 +248,12 @@ func DataCheck(message string) (bool, DataData) {
 }
 
 // PeersCheck checks the format of a `peers` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
-func PeersCheck(message string) (bool, PeersData) {
+func PeersCheck(message string) bool {
 	if match := PeersRegex().FindStringSubmatch(message); match != nil {
 		buffer := match[2]
 		if len(buffer) == 0 {
 			fmt.Println("No peer given.")
-			return false, PeersData{}
+			return false
 		}
 		// TODO: Check is match[1] is in RemoteFile
 		peersdata := strings.Split(match[2], " ")
@@ -264,9 +266,10 @@ func PeersCheck(message string) (bool, PeersData) {
 			peers[i].IP = info[0]
 			peers[i].Port = port
 		}
-		return true, PeersData{Key: match[1], Peers: peers}
+		RemotePeerFiles[match[1]] = PeersData{Key: match[1], Peers: peers} // TODO : Maybe do an append in case its already existing.
+		return true
 	}
-	return false, PeersData{}
+	return false
 }
 
 func (f *File) GetFile() (string, int, int, string, bool) {

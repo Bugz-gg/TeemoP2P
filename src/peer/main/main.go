@@ -84,7 +84,10 @@ func inputProg() {
 			case "cl", "close":
 				handlePeer(&MyPeer, "close")
 			case "exit":
-				fmt.Println("Ending the program :(")
+				fmt.Println("Ending the program :(, before we are closing all connections.")
+				for key, _ := range MyPeer.Comm {
+					MyPeer.Close(key)
+				}
 				os.Exit(1)
 			default:
 				fmt.Println("Command not found here the list: lp (launch a peer), handle, close, exit")

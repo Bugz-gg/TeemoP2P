@@ -57,9 +57,9 @@ func StartPeer(IP string, Port string, Type string) Peer {
 		Comm:  make(map[string]net.Conn),
 	}
 	peer.Files = tools.FillFilesFromConfig()
-	tools.LocalFiles = peer.Files // TODO : Change this.
+	tools.LocalFiles = &peer.Files // TODO : Change this.
 	tools.RemoteFiles = peer.Files
-	// fmt.Println(peer.Files, peer.Files["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap, tools.LocalFiles["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap, tools.RemoteFiles["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap)
+	fmt.Println(peer.Files, peer.Files["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap, tools.RemoteFiles["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap)
 	go peer.startListening()
 	time.Sleep(time.Second)
 	peer.HelloTrack(track)

@@ -119,6 +119,11 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         if (n == 0) {
             // Le client a fermé la connexion
             printf("Client disconnected\n");
+            if (client_socket[index] == sockfd) {
+                client_socket[index] = 0;
+                bad_attempts[index] = 0;
+                close(client_sockfd);
+            }
             return;
         }
         if (buffer[n - 1] == '\n' || !strcmp(&buffer[n - 2], "\r\n"))
@@ -128,9 +133,11 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     buffer[strcspn(buffer, "\r\n")] = 0;
     if (strcmp(buffer, "exit") == 0) {
         printf("Client requested to disconnect.\n");
-        client_socket[index] = 0;
-        bad_attempts[index] = 0;
-        close(client_sockfd);
+        if (client_socket[index] == sockfd) {
+            client_socket[index] = 0;
+            bad_attempts[index] = 0;
+            close(client_sockfd);
+        }
         return;
     }
     struct sockaddr_in addr;
@@ -205,7 +212,7 @@ int main(int argc, char *argv[]) {
     listen(sockfd, 5);
     clilen = sizeof(cli_addr);
     fd_set readfds;
-    printf("\033[92mReady\033[39m\n");
+    printf("\033[92mReady on %s:%d\033[39m\n", inet_ntoa(serv_addr.sin_addr), portno);
     while (1) {
         FD_ZERO(&readfds); // Clear the socket set
         FD_SET(sockfd, &readfds); // Add master socket to set

@@ -3,12 +3,13 @@ package tools
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strconv"
 )
 
 // BufferBitSize returns the length of the bit sequence needed for the BufferMap of a File.
 func BufferBitSize(file File) int {
-	return file.Size / file.PieceSize
+	return int(math.Ceil(float64(file.Size) / float64(file.PieceSize)))
 }
 
 // BufferSize returns the length of the array containing the bit sequence for the BufferMap of a File.

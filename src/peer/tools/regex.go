@@ -160,11 +160,7 @@ func HaveCheck(message string) (bool, HaveData) {
 		}
 		//file := RemoteFiles[match[1]]
 
-		if _, valid := (*LocalFiles)[match[1]]; !valid {
-			fmt.Println("No such file locally.")
-			return false, HaveData{}
-		}
-		file := (*LocalFiles)[match[1]]
+		file := RemoteFiles[match[1]] // Change from LocalFiles to RemoteFiles. Maybe add check Local ?
 		//file = &File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
 		if len(buffer) != BufferBitSize(*file) {
 			return false, HaveData{}
@@ -188,6 +184,7 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 		}
 		wantedPieces := Map(strings.Split(match[2], " "), func(item string) int { i, _ := strconv.Atoi(item); return i })
 		file := (*LocalFiles)[match[1]]
+		fmt.Println(file.BufferMap, file.Size, file.PieceSize, wantedPieces, BufferBitSize(*file))
 		var pieces []int
 		for _, i := range wantedPieces {
 			if i < BufferBitSize(*file) && ByteArrayCheck(file.BufferMap.BitSequence, i) {

@@ -58,7 +58,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	}
 	conn.Write([]byte(message))
 
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 32768)
 	fd, nerr := conn.Read(buffer)
 	errorCheck(nerr)
 	if fd > 0 {
@@ -72,7 +72,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ": > ", mess)
 				// fmt.Println("ET OUAIS .....")
-				os.MkdirAll(filepath.Join("./", tools.GetValueFromConfig("Peer", "path"), "/", func() string { return strings.TrimSuffix(tools.RemoteFiles[data.Key].Name, ".txt") }()), os.FileMode(0777))
+				os.MkdirAll(filepath.Join("./", tools.GetValueFromConfig("Peer", "path"), "/", "tabernak"), os.FileMode(0777))
 				file := p.Files[data.Key]
 				// if !ok {
 				// 	rFile := tools.RemoteFiles[data.Key]
@@ -80,19 +80,25 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				// 	tools.InitBufferMap(p.Files[data.Key])
 				// 	file = p.Files[data.Key]
 				// }
-				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
+				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "tabernak/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
 				errorCheck(err)
-				fdc, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/log"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
+				fdc, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "tabernak/log"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
 				errorCheck(err)
 				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)
 					errorCheck(err)
-					fdf.Write(data.Pieces[i].Data.BitSequence)
-					_, err = fdc.WriteString("\n" + time.Now().String() + "Downloading the " + string(data.Pieces[i].Index) + " piece.")
+					n, err := fdf.Write(data.Pieces[i].Data.BitSequence)
+					if n <= 0 {
+						fmt.Println("File as not being written. :(", err, data.Pieces[i].Data.BitSequence)
+
+					}
+					_, err = fdc.WriteString("\n" + time.Now().String() + "Downloading the " + fmt.Sprint(data.Pieces[i].Index) + " piece.")
 					errorCheck(err)
 					tools.ByteArrayWrite(&file.BufferMap.BitSequence, data.Pieces[i].Index)
 
 				}
+				fdf.Close()
+				fdc.Close()
 			} else {
 				fmt.Println("Invalid data response...")
 			}
@@ -136,7 +142,7 @@ func (p *Peer) interested(key string) {
 	l := len(temp.Peers)
 	for max, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_peers_to_connect")); max != 0; max-- {
 		random := rand.Intn(l)
-		p.ConnectTo(temp.Peers[random].IP, string(temp.Peers[random].Port), "interested"+" "+key)
+		p.ConnectTo(temp.Peers[random].IP, fmt.Sprint(temp.Peers[random].Port), "interested"+" "+key)
 	}
 }
 

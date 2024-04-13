@@ -230,7 +230,7 @@ func (p *Peer) startListening() {
 					if (events[ev].Events&unix.EPOLLHUP) != 0 || (events[ev].Events&unix.EPOLLERR) != 0 {
 						return
 					} else if (events[ev].Events & unix.EPOLLIN) != 0 {
-						data := make([]byte, 256)
+						data := make([]byte, 32768)
 						_, err := conn.Read(data)
 						if err != nil {
 							fmt.Println("Read error:", err)

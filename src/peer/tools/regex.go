@@ -239,7 +239,6 @@ func DataCheck(message string) (bool, DataData) {
 				fmt.Println("Wrong piece size received.")
 				return false, DataData{}
 			}
-			WriteFile(file, index, piece[1])
 			pieces[i].Index = index
 			pieces[i].Data = StringToData(piece[1])
 

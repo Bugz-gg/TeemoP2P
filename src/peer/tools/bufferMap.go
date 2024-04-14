@@ -32,8 +32,8 @@ func ByteArrayWrite(array *[]byte, index int) {
 }
 
 // ByteArrayErase sets the bit at `index` position to 0.
-func ByteArrayErase(array []byte, index int) {
-	array[index/8] &= ^(1 << (7 - (index % 8)))
+func ByteArrayErase(array *[]byte, index int) {
+	(*array)[index/8] &= ^(1 << (7 - (index % 8)))
 }
 
 // ByteArrayCheck tells if the bit at `index` position is set to 1.
@@ -89,9 +89,4 @@ func PrintBuffer(array []byte) {
 		buf.WriteString(paddedBinary)
 	}
 	fmt.Println(buf.String())
-}
-
-// WriteFile writes the received data for a file.
-func WriteFile(file *File, index int, str string) {
-
 }

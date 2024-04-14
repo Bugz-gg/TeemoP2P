@@ -2,12 +2,11 @@ package tools
 
 // File contains the basic data about a file.
 type File struct {
-	Name            string
-	Size            int
-	PieceSize       int
-	Key             string
-	BufferMapLength int
-	Peers           map[string]*Peer
+	Name      string
+	Size      int
+	PieceSize int
+	Key       string
+	Peers     map[string]*Peer
 } //BufferMap BufferMap
 
 // Piece contains the data about a piece (the actual data).

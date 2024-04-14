@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-var dummyFile = tools.File{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu", Size: 24, PieceSize: 2, BufferMapLength: 2}
-var dummyFile2 = tools.File{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", Size: 36, PieceSize: 3, BufferMapLength: 2}
-var dummyFile3 = tools.File{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Size: 45, PieceSize: 3, BufferMapLength: 2}
+var dummyFile = tools.File{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu", Size: 24, PieceSize: 2}
+var dummyFile2 = tools.File{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", Size: 36, PieceSize: 3}
+var dummyFile3 = tools.File{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Size: 45, PieceSize: 3}
 
 func TestList(t *testing.T) {
 	fmt.Println(">>> List regex")
@@ -67,8 +67,7 @@ func TestHave(t *testing.T) {
 	//tools.InitBufferMap(&dummyFile2)
 
 	success, haveData := tools.HaveCheck("have Uizhsja8hzUizhsja8hzU7zhsja8hzsu 010010101001")
-	expectedHaveData := tools.HaveData{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", BufferMap: tools.BufferMap{12, tmpMap[dummyFile2.Key].BitSequence}}
-	// fmt.Println("TESTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO", tools.BufferMapToString(expectedHaveData.BufferMap))
+	expectedHaveData := tools.HaveData{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", BufferMap: tools.BufferMap{Length: 12, BitSequence: tmpMap[dummyFile2.Key].BitSequence}}
 	if !success || !tools.HaveCmp(haveData, expectedHaveData) {
 		t.Errorf("HaveCheck failed. Expected: true %v, Got: %v %v", expectedHaveData, success, haveData)
 	}
@@ -90,6 +89,7 @@ func TestGetPieces(t *testing.T) {
 	dummyBufferMaps[dummyFile.Key] = &dummyBuffermap
 	dummyFile.Peers = make(map[string]*tools.Peer)
 	dummyFile.Peers["self"] = &tools.Peer{BufferMaps: dummyBufferMaps}
+	tools.ByteArrayWrite(&dummyFile.Peers["self"].BufferMaps["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].BitSequence, 0)
 	// tools.BufferMapWrite(&dummyFile.BufferMap, 0)
 
 	tools.AddFile(tools.LocalFiles, &dummyFile3)
@@ -102,8 +102,8 @@ func TestGetPieces(t *testing.T) {
 	//tools.InitBufferMap(&dummyFile3)
 
 	tmpMap[dummyFile3.Key] = &tools.BufferMap{Length: 12, BitSequence: make([]byte, 2)}
-	tools.ByteArrayWrite(&tmpMap[dummyFile3.Key].BitSequence, 0)
-	tools.ByteArrayWrite(&tmpMap[dummyFile3.Key].BitSequence, 5)
+	tools.ByteArrayWrite(&dummyFile3.Peers["self"].BufferMaps["Uizhsja8hzpolisja8hzUizhsja8hzsu"].BitSequence, 0)
+	tools.ByteArrayWrite(&dummyFile3.Peers["self"].BufferMaps["Uizhsja8hzpolisja8hzUizhsja8hzsu"].BitSequence, 5)
 
 	success, getPiecesData := tools.GetPiecesCheck("getpieces UizhsjakhzUizhsja8hzUizhsja8hzsu []")
 	expectedGetPiecesData := tools.GetPiecesData{}
@@ -121,6 +121,10 @@ func TestGetPieces(t *testing.T) {
 	if !success3 || !tools.GetPiecesCmp(getPiecesData3, expectedGetPiecesData3) {
 		t.Errorf("GetPiecesCheck failed. Expected: true %v, Got: %v %v", expectedGetPiecesData3, success3, getPiecesData3)
 	}
+
+	tools.ByteArrayErase(&dummyFile.Peers["self"].BufferMaps["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].BitSequence, 0)
+	tools.ByteArrayErase(&dummyFile3.Peers["self"].BufferMaps["Uizhsja8hzpolisja8hzUizhsja8hzsu"].BitSequence, 0)
+	tools.ByteArrayErase(&dummyFile3.Peers["self"].BufferMaps["Uizhsja8hzpolisja8hzUizhsja8hzsu"].BitSequence, 5)
 }
 
 func TestData(t *testing.T) {
@@ -172,7 +176,7 @@ func TestData(t *testing.T) {
 	// Correct
 	success5, dataData5 := tools.DataCheck("data Uizhsja8hzpolisja8hzUizhsja8hzsu [0:101101101101101101101101]")
 	expectedDataData5 := tools.DataData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Pieces: []tools.Piece{{Index: 0, Data: tools.Data{Length: 3, BitSequence: []byte{182, 219, 109}}}}}
-	if !success4 || !tools.DataCmp(dataData5, expectedDataData5) {
+	if !success5 || !tools.DataCmp(dataData5, expectedDataData5) {
 		t.Errorf("DataCheck failed. Expected: true %v, Got: %v %v", expectedDataData5, success5, dataData5)
 	}
 }

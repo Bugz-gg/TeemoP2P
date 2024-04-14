@@ -76,7 +76,7 @@ func fillStruct(files []string) map[string]*File {
 			Port:       0,
 			BufferMaps: bufferMaps,
 		}
-		for u := range fil.BufferMapLength {
+		for u := range BufferSize(fil) {
 			BufferMapWrite(&(*(fil.Peers["self"].BufferMaps)[fil.Key]), u)
 		}
 		// fmt.Println(fil.BufferMap)

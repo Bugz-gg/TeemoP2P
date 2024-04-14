@@ -133,10 +133,8 @@ func ListCheck(message string) (bool, ListData) {
 				fmt.Println("Invalid key.", err, err2)
 				return false, ListData{}
 			}
-			if _, valid := RemoteFiles[key]; !valid {
-				file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key}
-				// file.Peers[peerid] = peer
-				RemoteFiles[key] = &file // Update the registered remote files.
+			if _, valid := RemoteFiles[key]; !valid { // If not registered as a RemoteFile.
+				RemoteFiles[key] = &File{Name: filename, Size: size, PieceSize: pieceSize, Key: key} // Update the registered remote files.
 			}
 			file := RemoteFiles[key]
 			// file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key} //, BufferMap: BufferMap{Length: size / pieceSize, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
@@ -231,6 +229,7 @@ func DataCheck(message string) (bool, DataData) {
 				fmt.Printf("Out or range index received. (%d)\n", index)
 				return false, DataData{}
 			}
+			// Make initialize self with id ?
 			if ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, index) {
 				fmt.Printf("Already have the piece at index %d.\n", index)
 				//return false, DataData{}
@@ -244,13 +243,11 @@ func DataCheck(message string) (bool, DataData) {
 			pieces[i].Index = index
 			pieces[i].Data = StringToData(piece[1])
 
-			// Check if received is exactly what was asked ? No. Can be less.
 			// Check integrity of file if all pieces have been downloaded ?
 
 		}
 		return true, DataData{Key: match[1], Pieces: pieces}
 	}
-	fmt.Println("Data regex false")
 	return false, DataData{}
 }
 
@@ -262,25 +259,29 @@ func PeersCheck(message string) bool {
 			fmt.Println("No peer given.")
 			return false
 		}
-		// TODO: Check if match[1] is in RemoteFile
+		if _, valid := RemoteFiles[match[1]]; !valid { // If the file is not registered yet (we don't have any information about it).
+			fmt.Printf("No data about file %s.", match[1])
+			return false
+		}
+
 		peersdata := strings.Split(match[2], " ")
 
-		//peers := make([]Peer, len(peersdata))
-		peers := RemoteFiles[match[1]].Peers //make(map[string]*Peer, len(peersdata))
+		peers := RemoteFiles[match[1]].Peers
+		if peers == nil {
+			peers = make(map[string]*Peer)
+		}
 
 		// Check if peer already registered
 		for _, data := range peersdata {
 			info := strings.Split(data, ":")
 			port, _ := strconv.Atoi(info[1])
-			//peer := &Peer{IP: info[0], Port: port}
-
-			peer := AllPeers[fmt.Sprintf("%s:%d", info[0], port)] // = peer
-			if peers == nil {
-				peers = make(map[string]*Peer)
+			peerId := fmt.Sprintf("%s:%d", info[0], port)
+			if _, valid := AllPeers[peerId]; !valid { // If it is the first time learning about a peer.
+				AllPeers[peerId] = &Peer{IP: info[0], Port: port}
 			}
-			peers[fmt.Sprintf("%s:%d", info[0], port)] = peer
+
+			peers[peerId] = AllPeers[peerId] // Add peer to list of peers having the file.
 		}
-		//RemoteFiles[match[1]] = &File{Key: match[1], Peers: peers} // TODO : Maybe do an append in case its already existing.
 		return true
 	}
 	return false

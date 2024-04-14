@@ -6,27 +6,29 @@ import (
 	"testing"
 )
 
-var dummyFile = tools.File{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu", Size: 24, PieceSize: 2}
-var dummyFile2 = tools.File{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", Size: 36, PieceSize: 3}
-var dummyFile3 = tools.File{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Size: 45, PieceSize: 3}
+var dummyFile = tools.File{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu", Size: 24, PieceSize: 2, BufferMapLength: 2}
+var dummyFile2 = tools.File{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", Size: 36, PieceSize: 3, BufferMapLength: 2}
+var dummyFile3 = tools.File{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Size: 45, PieceSize: 3, BufferMapLength: 2}
 
 func TestList(t *testing.T) {
 	fmt.Println(">>> List regex")
+	tmpFiles := map[string]*tools.File{}
+	tools.LocalFiles = &tmpFiles
 	tools.AddFile(tools.LocalFiles, &dummyFile)
-	tools.InitBufferMap(&dummyFile)
-	tools.BufferMapWrite(&dummyFile.BufferMap, 0)
-	tools.BufferMapWrite(&dummyFile.BufferMap, 5)
+	//tools.InitBufferMap(&dummyFile)
+	//tools.BufferMapWrite(&dummyFile.BufferMap, 0)
+	//tools.BufferMapWrite(&dummyFile.BufferMap, 5)
 
 	success, listData := tools.ListCheck("list [f.e 12 1 Uizhsja8hzUizhsja8hzUizhsja8hzsu]")
 	expectedListData := tools.ListData{Files: []tools.File{{Name: "f.e", Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}}}
-	tools.InitBufferMap(&(expectedListData.Files[0]))
+	//tools.InitBufferMap(&(expectedListData.Files[0]))
 	if !success || !tools.ListDataCmp(listData, expectedListData) {
 		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData, success, listData)
 	}
 
 	success2, listData2 := tools.ListCheck("list [etoausk 22 2 df833476b1fbb8aa113c14d5a9421180]")
 	expectedListData2 := tools.ListData{Files: []tools.File{{Name: "etoausk", Size: 22, PieceSize: 2, Key: "df833476b1fbb8aa113c14d5a9421180"}}}
-	tools.InitBufferMap(&(expectedListData2.Files[0]))
+	//tools.InitBufferMap(&(expectedListData2.Files[0]))
 	if !success || !tools.ListDataCmp(listData2, expectedListData2) {
 		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData2, success2, listData2)
 	}
@@ -49,17 +51,23 @@ func TestInterested(t *testing.T) {
 
 func TestHave(t *testing.T) {
 	fmt.Println(">>> Have regex")
-
-	tools.AddFile(tools.LocalFiles, &dummyFile2)
-	tools.InitBufferMap(&dummyFile2)
-	tools.BufferMapWrite(&dummyFile2.BufferMap, 1)
-	tools.BufferMapWrite(&dummyFile2.BufferMap, 4)
-	tools.BufferMapWrite(&dummyFile2.BufferMap, 6)
-	tools.BufferMapWrite(&dummyFile2.BufferMap, 8)
-	tools.BufferMapWrite(&dummyFile2.BufferMap, 11)
+	tmpFiles := map[string]*tools.File{}
+	tools.LocalFiles = &tmpFiles
+	tmpFilesRemote := map[string]*tools.File{}
+	tools.RemoteFiles = tmpFilesRemote
+	tmpMap := make(map[string]*tools.BufferMap)
+	tmpMap[dummyFile2.Key] = &tools.BufferMap{Length: 12, BitSequence: make([]byte, 2)}
+	tools.ByteArrayWrite(&tmpMap[dummyFile2.Key].BitSequence, 1)
+	tools.ByteArrayWrite(&tmpMap[dummyFile2.Key].BitSequence, 4)
+	tools.ByteArrayWrite(&tmpMap[dummyFile2.Key].BitSequence, 6)
+	tools.ByteArrayWrite(&tmpMap[dummyFile2.Key].BitSequence, 8)
+	tools.ByteArrayWrite(&tmpMap[dummyFile2.Key].BitSequence, 11)
+	//dummyPeer := tools.Peer{IP: "10.0.0.1", Port: 34, BufferMaps: &tmpMap}
+	tools.AddFile(&tools.RemoteFiles, &dummyFile2)
+	//tools.InitBufferMap(&dummyFile2)
 
 	success, haveData := tools.HaveCheck("have Uizhsja8hzUizhsja8hzU7zhsja8hzsu 010010101001")
-	expectedHaveData := tools.HaveData{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", BufferMap: tools.LocalFiles["Uizhsja8hzUizhsja8hzU7zhsja8hzsu"].BufferMap}
+	expectedHaveData := tools.HaveData{Key: "Uizhsja8hzUizhsja8hzU7zhsja8hzsu", BufferMap: tools.BufferMap{12, tmpMap[dummyFile2.Key].BitSequence}}
 	// fmt.Println("TESTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO", tools.BufferMapToString(expectedHaveData.BufferMap))
 	if !success || !tools.HaveCmp(haveData, expectedHaveData) {
 		t.Errorf("HaveCheck failed. Expected: true %v, Got: %v %v", expectedHaveData, success, haveData)
@@ -69,21 +77,39 @@ func TestHave(t *testing.T) {
 func TestGetPieces(t *testing.T) {
 	fmt.Println(">>> GetPieces regex")
 
+	tmpFiles := map[string]*tools.File{}
+	tools.LocalFiles = &tmpFiles
 	tools.AddFile(tools.LocalFiles, &dummyFile)
-	tools.InitBufferMap(&dummyFile)
-	tools.BufferMapWrite(&dummyFile.BufferMap, 0)
+	//tools.InitBufferMap(&dummyFile)
+	tmpMap := make(map[string]*tools.BufferMap)
+	tmpMap[dummyFile.Key] = &tools.BufferMap{Length: 12, BitSequence: make([]byte, 2)}
+	tools.ByteArrayWrite(&tmpMap[dummyFile.Key].BitSequence, 0)
+	tools.AddFile(tools.LocalFiles, &dummyFile)
+	dummyBuffermap := tools.InitBufferMap(dummyFile.Size, dummyFile.PieceSize)
+	dummyBufferMaps := make(map[string]*tools.BufferMap)
+	dummyBufferMaps[dummyFile.Key] = &dummyBuffermap
+	dummyFile.Peers = make(map[string]*tools.Peer)
+	dummyFile.Peers["self"] = &tools.Peer{BufferMaps: dummyBufferMaps}
+	// tools.BufferMapWrite(&dummyFile.BufferMap, 0)
 
 	tools.AddFile(tools.LocalFiles, &dummyFile3)
-	tools.InitBufferMap(&dummyFile3)
-	tools.BufferMapWrite(&dummyFile3.BufferMap, 0)
-	tools.BufferMapWrite(&dummyFile3.BufferMap, 5)
+	dummyBuffermap2 := tools.InitBufferMap(dummyFile3.Size, dummyFile3.PieceSize)
+	dummyBufferMaps2 := make(map[string]*tools.BufferMap)
+	dummyBufferMaps2[dummyFile3.Key] = &dummyBuffermap2
+	dummyFile3.Peers = make(map[string]*tools.Peer)
+	dummyFile3.Peers["self"] = &tools.Peer{BufferMaps: dummyBufferMaps2}
+
+	//tools.InitBufferMap(&dummyFile3)
+
+	tmpMap[dummyFile3.Key] = &tools.BufferMap{Length: 12, BitSequence: make([]byte, 2)}
+	tools.ByteArrayWrite(&tmpMap[dummyFile3.Key].BitSequence, 0)
+	tools.ByteArrayWrite(&tmpMap[dummyFile3.Key].BitSequence, 5)
 
 	success, getPiecesData := tools.GetPiecesCheck("getpieces UizhsjakhzUizhsja8hzUizhsja8hzsu []")
 	expectedGetPiecesData := tools.GetPiecesData{}
 	if success || !tools.GetPiecesCmp(getPiecesData, expectedGetPiecesData) {
 		t.Errorf("GetPiecesCheck failed. Expected: false %v, Got: %v %v", expectedGetPiecesData, success, getPiecesData)
 	}
-	fmt.Print(&dummyFile3.BufferMap)
 	success2, getPiecesData2 := tools.GetPiecesCheck("getpieces Uizhsja8hzUizhsja8hzUizhsja8hzsu [0 893 88]")
 	expectedGetPiecesData2 := tools.GetPiecesData{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu", Pieces: []int{0}}
 	if !success2 || !tools.GetPiecesCmp(getPiecesData2, expectedGetPiecesData2) {
@@ -100,12 +126,20 @@ func TestGetPieces(t *testing.T) {
 func TestData(t *testing.T) {
 	fmt.Println(">>> Data regex")
 
-	tools.AddFile(tools.LocalFiles, &dummyFile)
-	tools.InitBufferMap(&dummyFile)
-	tools.BufferMapWrite(&dummyFile.BufferMap, 0)
+	//tools.AddFile(tools.LocalFiles, &dummyFile)
+	tmpMap := make(map[string]*tools.BufferMap)
+	tmpMap[dummyFile.Key] = &tools.BufferMap{Length: 12, BitSequence: make([]byte, 2)}
+	tools.ByteArrayWrite(&tmpMap[dummyFile.Key].BitSequence, 0)
+	//tools.InitBufferMap(&dummyFile)
+	//tools.BufferMapWrite(&dummyFile.BufferMap, 0)
 
-	tools.AddFile(tools.RemoteFiles, &dummyFile3)
-	tools.InitBufferMap(&dummyFile3)
+	tmpMap[dummyFile3.Key] = &tools.BufferMap{Length: 15, BitSequence: make([]byte, 2)}
+	tools.ByteArrayWrite(&tmpMap[dummyFile3.Key].BitSequence, 0)
+	tmpMap[dummyFile3.Key] = &tools.BufferMap{Length: 12, BitSequence: make([]byte, 2)}
+	tools.ByteArrayWrite(&tmpMap[dummyFile3.Key].BitSequence, 0)
+	tools.ByteArrayWrite(&tmpMap[dummyFile3.Key].BitSequence, 5)
+	tools.AddFile(&tools.RemoteFiles, &dummyFile3)
+	//tools.InitBufferMap(&dummyFile3)
 	//tools.BufferMapWrite(&dummyFile3.BufferMap, 0)
 	//tools.BufferMapWrite(&dummyFile3.BufferMap, 5)
 
@@ -145,24 +179,34 @@ func TestData(t *testing.T) {
 
 func TestPeers(t *testing.T) {
 	fmt.Println(">>> Peers regex")
+	tmpFiles := map[string]*tools.File{}
+	tools.LocalFiles = &tmpFiles
 
+	tools.AllPeers["10.0.0.10:32"] = &tools.Peer{IP: "10.0.0.10", Port: 32}
+	tools.AllPeers["249.111.109.19:100"] = &tools.Peer{IP: "249.111.109.19", Port: 100}
+
+	tools.RemoteFiles["UizhsjakhzUizhsja8hzUizhsja8hzsu"] = &tools.File{Key: "UizhsjakhzUizhsja8hzUizhsja8hzsu"}
 	// No peer given
-	success, peersData := tools.PeersCheck("peers UizhsjakhzUizhsja8hzUizhsja8hzsu []")
-	expectedPeersData := tools.PeersData{}
-	if success || !tools.PeersCmp(peersData, expectedPeersData) {
-		t.Errorf("PeersCheck failed. Expected: false %v, Got: %v %v", expectedPeersData, success, peersData)
+	success := tools.PeersCheck("peers UizhsjakhzUizhsja8hzUizhsja8hzsu []")
+	expectedPeersMap := make(map[string]*tools.Peer)
+	if success || !tools.MapPeersCmp(tools.RemoteFiles["UizhsjakhzUizhsja8hzUizhsja8hzsu"].Peers, expectedPeersMap) {
+		t.Errorf("PeersCheck failed. Expected: false (%v), Got: %v (%v)", expectedPeersMap, success, (*tools.LocalFiles)["UizhsjakhzUizhsja8hzUizhsja8hzsu"].Peers)
 	}
 
+	tools.RemoteFiles["Uizhsja8hzUizhsja8hzUizhsja8hzsu"] = &tools.File{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}
 	// Wrong peer format
-	success2, peersData2 := tools.PeersCheck("peers Uizhsja8hzUizhsja8hzUizhsja8hzsu [0:0 893:0 88:1]")
-	if success2 || !tools.PeersCmp(peersData2, expectedPeersData) {
-		t.Errorf("PeersCheck failed. Expected: false %v, Got: %v %v", expectedPeersData, success2, peersData2)
+	success2 := tools.PeersCheck("peers Uizhsja8hzUizhsja8hzUizhsja8hzsu [0:0 893:0 88:1]")
+	if success2 || !tools.MapPeersCmp(tools.RemoteFiles["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].Peers, expectedPeersMap) {
+		t.Errorf("PeersCheck failed. Expected: false (%v), Got: %v (%v)", expectedPeersMap, success2, (*tools.LocalFiles)["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].Peers)
 	}
 
+	tools.RemoteFiles["Uizhsja8hzpolisja8hzUizhsja8hzsu"] = &tools.File{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}
 	// Correct
-	success4, peersData4 := tools.PeersCheck("peers Uizhsja8hzpolisja8hzUizhsja8hzsu [10.0.0.10:32 249.111.109.19:100]")
-	expectedPeersData4 := tools.PeersData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Peers: []tools.Peer{{IP: "10.0.0.10", Port: 32}, {IP: "249.111.109.19", Port: 100}}}
-	if !success4 || !tools.PeersCmp(peersData4, expectedPeersData4) {
-		t.Errorf("PeersCheck failed. Expected: true %v, Got: %v %v", expectedPeersData4, success4, peersData4)
+	success4 := tools.PeersCheck("peers Uizhsja8hzpolisja8hzUizhsja8hzsu [10.0.0.10:32 249.111.109.19:100]")
+	expectedPeersMap4 := make(map[string]map[string]*tools.Peer)
+	expectedPeersMap4["Uizhsja8hzpolisja8hzUizhsja8hzsu"] = map[string]*tools.Peer{"10.0.0.10:32": {IP: "10.0.0.10", Port: 32}, "249.111.109.19:100": {IP: "249.111.109.19", Port: 100}}
+	//expectedPeersData4 := tools.PeersData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Peers: []tools.Peer{{IP: "10.0.0.10", Port: 32}, {IP: "249.111.109.19", Port: 100}}}
+	if !success4 || !tools.MapPeersCmp(tools.RemoteFiles["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].Peers, expectedPeersMap4["Uizhsja8hzpolisja8hzUizhsja8hzsu"]) {
+		t.Errorf("PeersCheck failed. Expected: true (%v), Got: %v (%v)", expectedPeersMap4, success4, (*tools.LocalFiles)["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].Peers)
 	}
 }

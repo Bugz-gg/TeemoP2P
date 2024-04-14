@@ -44,6 +44,7 @@ func searchFiles(path string) ([]string, error) {
 
 func fillStruct(files []string) map[string]*File {
 	result := make(map[string]*File)
+	bufferMaps := make(map[string]*BufferMap)
 	for _, filePath := range files {
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
@@ -67,9 +68,16 @@ func fillStruct(files []string) map[string]*File {
 			PieceSize: pieceSize,
 			Key:       GetMD5Hash(filePath),
 		}
-		InitBufferMap(&fil)
-		for u := range fil.BufferMap.Length {
-			BufferMapWrite(&fil.BufferMap, u)
+		buffermap := InitBufferMap(fil.Size, fil.PieceSize)
+		bufferMaps[fil.Key] = &buffermap
+		//InitBufferMap(&fil)
+		fil.Peers["self"] = &Peer{
+			IP:         "",
+			Port:       0,
+			BufferMaps: bufferMaps,
+		}
+		for u := range fil.BufferMapLength {
+			BufferMapWrite(&(*(fil.Peers["self"].BufferMaps)[fil.Key]), u)
 		}
 		// fmt.Println(fil.BufferMap)
 		result[fil.Key] = &fil

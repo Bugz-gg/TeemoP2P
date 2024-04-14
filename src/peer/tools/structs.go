@@ -2,12 +2,13 @@ package tools
 
 // File contains the basic data about a file.
 type File struct {
-	Name      string
-	Size      int
-	PieceSize int
-	Key       string
-	BufferMap BufferMap
-}
+	Name            string
+	Size            int
+	PieceSize       int
+	Key             string
+	BufferMapLength int
+	Peers           map[string]*Peer
+} //BufferMap BufferMap
 
 // Piece contains the data about a piece (the actual data).
 type Piece struct {
@@ -59,8 +60,9 @@ type PeersData struct {
 
 // Peer is a struct used by PeersData.
 type Peer struct {
-	IP   string
-	Port int
+	IP         string
+	Port       int
+	BufferMaps map[string]*BufferMap
 }
 
 // BufferMap tells whether the peer has the pieces of a file.
@@ -72,7 +74,7 @@ type BufferMap struct {
 
 // FileCmp tells if two File are equal.
 func FileCmp(f1 File, f2 File) bool {
-	return f1.Key == f2.Key && f1.Name == f2.Name && (f1.Size == f2.Size) && (f1.PieceSize == f2.PieceSize) && BufferMapCmp(f1.BufferMap, f2.BufferMap)
+	return f1.Key == f2.Key // && f1.Name == f2.Name && (f1.Size == f2.Size) && (f1.PieceSize == f2.PieceSize) && (&f1.Peers == &f2.Peers) //BufferMapCmp(f1.BufferMap, f2.BufferMap)
 }
 
 // ListDataCmp tells if two ListData are equal.
@@ -172,4 +174,17 @@ func PeersCmp(pD1 PeersData, pD2 PeersData) bool {
 
 func PeerCmp(p1 Peer, p2 Peer) bool {
 	return p1.IP == p2.IP && p1.Port == p2.Port
+}
+
+func MapPeersCmp(mp1 map[string]*Peer, mp2 map[string]*Peer) bool {
+	for k, arr := range mp1 {
+		arr2, err := mp2[k]
+		if err {
+			return false
+		}
+		if arr != arr2 {
+			return false
+		}
+	}
+	return true
 }

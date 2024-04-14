@@ -13,16 +13,19 @@ var LocalFiles *map[string]*File // Supposing no collision will happen during th
 // RemoteFiles A map to store remote files' data.
 var RemoteFiles = map[string]*File{} // Supposing no collision will happen during the project
 
-var RemotePeerFiles map[string]PeersData
+// AllPeers A map to store all connected peers.
+var AllPeers = map[string]*Peer{}
+
+//var RemotePeerFiles map[string]PeersData
 
 // AddFile adds a file to a map. (LocalFiles and RemoteFiles in this project.)
-func AddFile(fileMap map[string]*File, file *File) {
-	fileMap[file.Key] = file
+func AddFile(fileMap *map[string]*File, file *File) {
+	(*fileMap)[file.Key] = file
 }
 
 // RemoveFile removes a file from a map.  (LocalFiles and RemoteFiles in this project.)
-func RemoveFile(fileMap map[string]*File, file File) {
-	delete(fileMap, file.Key)
+func RemoveFile(fileMap *map[string]*File, file File) {
+	delete(*fileMap, file.Key)
 }
 
 // Map is a function to apply a function on all elements of an array.
@@ -130,9 +133,15 @@ func ListCheck(message string) (bool, ListData) {
 				fmt.Println("Invalid key.", err, err2)
 				return false, ListData{}
 			}
-			file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key, BufferMap: BufferMap{Length: size / pieceSize, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
-			listStruct.Files = append(listStruct.Files, file)
-			RemoteFiles[key] = &file // Update the registered remote files.
+			if _, valid := RemoteFiles[key]; !valid {
+				file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key}
+				// file.Peers[peerid] = peer
+				RemoteFiles[key] = &file // Update the registered remote files.
+			}
+			file := RemoteFiles[key]
+			// file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key} //, BufferMap: BufferMap{Length: size / pieceSize, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
+			listStruct.Files = append(listStruct.Files, *file)
+			//RemoteFiles[key] = &file
 		}
 		return true, listStruct
 	}
@@ -184,10 +193,9 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 		}
 		wantedPieces := Map(strings.Split(match[2], " "), func(item string) int { i, _ := strconv.Atoi(item); return i })
 		file := (*LocalFiles)[match[1]]
-		fmt.Println(file.BufferMap, file.Size, file.PieceSize, wantedPieces, BufferBitSize(*file))
 		var pieces []int
 		for _, i := range wantedPieces {
-			if i < BufferBitSize(*file) && ByteArrayCheck(file.BufferMap.BitSequence, i) {
+			if i < BufferBitSize(*file) && ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, i) {
 				pieces = append(pieces, i)
 			} else {
 				fmt.Println("Invalid pieces' numbers :", i)
@@ -209,7 +217,7 @@ func DataCheck(message string) (bool, DataData) {
 		if _, valid := (*LocalFiles)[match[1]]; !valid { // If we don't have any piece of the requested file yet.
 			rFile := RemoteFiles[match[1]]
 			(*LocalFiles)[match[1]] = &File{Name: rFile.Name, Size: rFile.Size, PieceSize: rFile.PieceSize, Key: match[1]}
-			InitBufferMap((*LocalFiles)[match[1]])
+			//InitBufferMap((*LocalFiles)[match[1]])
 		}
 		piecesdata := strings.Split(match[2], " ")
 
@@ -219,11 +227,11 @@ func DataCheck(message string) (bool, DataData) {
 		for i, data := range piecesdata {
 			piece := strings.Split(data, ":")
 			index, _ := strconv.Atoi(piece[0])
-			if index < 0 || index >= file.BufferMap.Length {
-				fmt.Println("Out or range index received.")
+			if index < 0 || index >= BufferBitSize(*file) { //file.BufferMapLength {
+				fmt.Printf("Out or range index received. (%d)\n", index)
 				return false, DataData{}
 			}
-			if ByteArrayCheck(file.BufferMap.BitSequence, index) {
+			if ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, index) {
 				fmt.Printf("Already have the piece at index %d.\n", index)
 				//return false, DataData{}
 				continue
@@ -254,18 +262,25 @@ func PeersCheck(message string) bool {
 			fmt.Println("No peer given.")
 			return false
 		}
-		// TODO: Check is match[1] is in RemoteFile
+		// TODO: Check if match[1] is in RemoteFile
 		peersdata := strings.Split(match[2], " ")
 
-		peers := make([]Peer, len(peersdata))
+		//peers := make([]Peer, len(peersdata))
+		peers := RemoteFiles[match[1]].Peers //make(map[string]*Peer, len(peersdata))
 
-		for i, data := range peersdata {
+		// Check if peer already registered
+		for _, data := range peersdata {
 			info := strings.Split(data, ":")
 			port, _ := strconv.Atoi(info[1])
-			peers[i].IP = info[0]
-			peers[i].Port = port
+			//peer := &Peer{IP: info[0], Port: port}
+
+			peer := AllPeers[fmt.Sprintf("%s:%d", info[0], port)] // = peer
+			if peers == nil {
+				peers = make(map[string]*Peer)
+			}
+			peers[fmt.Sprintf("%s:%d", info[0], port)] = peer
 		}
-		RemotePeerFiles[match[1]] = PeersData{Key: match[1], Peers: peers} // TODO : Maybe do an append in case its already existing.
+		//RemoteFiles[match[1]] = &File{Key: match[1], Peers: peers} // TODO : Maybe do an append in case its already existing.
 		return true
 	}
 	return false

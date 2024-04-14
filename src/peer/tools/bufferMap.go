@@ -7,9 +7,13 @@ import (
 	"strconv"
 )
 
+func BitSize(size int, pieceSize int) int {
+	return int(math.Ceil(float64(size) / float64(pieceSize)))
+}
+
 // BufferBitSize returns the length of the bit sequence needed for the BufferMap of a File.
 func BufferBitSize(file File) int {
-	return int(math.Ceil(float64(file.Size) / float64(file.PieceSize)))
+	return BitSize(file.Size, file.PieceSize)
 }
 
 // BufferSize returns the length of the array containing the bit sequence for the BufferMap of a File.
@@ -18,8 +22,8 @@ func BufferSize(file File) int {
 }
 
 // InitBufferMap helps to initialize a BufferMap of a File.
-func InitBufferMap(file *File) {
-	file.BufferMap = BufferMap{Length: BufferBitSize(*file), BitSequence: make([]byte, BufferSize(*file))}
+func InitBufferMap(size int, pieceSize int) BufferMap {
+	return BufferMap{Length: BitSize(size, pieceSize), BitSequence: make([]byte, (size-1)/pieceSize/8+1)}
 }
 
 // ByteArrayWrite sets the bit at `index` position to 1.

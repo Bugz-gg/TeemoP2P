@@ -138,11 +138,19 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 }
 
 func (p *Peer) interested(key string) {
-	temp := tools.RemotePeerFiles[key]
+	temp := tools.RemoteFiles[key]
 	l := len(temp.Peers)
 	for max, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_peers_to_connect")); max != 0; max-- {
-		random := rand.Intn(l)
-		p.ConnectTo(temp.Peers[random].IP, fmt.Sprint(temp.Peers[random].Port), "interested"+" "+key)
+		//random := rand.Intn(l)
+		var randomPeer tools.Peer
+		k := rand.Intn(l)
+		for _, peer := range temp.Peers {
+			if k == 0 {
+				randomPeer = *peer
+			}
+			k--
+		}
+		p.ConnectTo(randomPeer.IP, fmt.Sprint(randomPeer.Port), "interested"+" "+key)
 	}
 }
 

@@ -94,7 +94,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					}
 					_, err = fdc.WriteString("\n" + time.Now().String() + "Downloading the " + fmt.Sprint(data.Pieces[i].Index) + " piece.")
 					errorCheck(err)
-					tools.ByteArrayWrite(&file.BufferMap.BitSequence, data.Pieces[i].Index)
+					tools.ByteArrayWrite(&file.Peers[conn.LocalAddr().String()].BufferMaps[data.Key].BitSequence, data.Pieces[i].Index)
 
 				}
 				fdf.Close()

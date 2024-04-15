@@ -4,17 +4,11 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <signal.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <sys/time.h>
-#include <stdbool.h>
 #include <errno.h>
 #include <sys/select.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include "signal.h"
 #include "thpool.h"
 #include "tools.h"
 #include "tracker.h"

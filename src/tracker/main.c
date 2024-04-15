@@ -33,8 +33,10 @@ static int sockfd;
 int client_socket[MAX_PEERS] = {0};
 int bad_attempts[MAX_PEERS] = {0};
 Peer *connected_peers[MAX_PEERS];
+FILE *log_file;
 
 void close_on_exit(int signo) {
+    fclose(log_file);
     thpool_destroy(thpool);
     signal(SIGINT, old_handler);
     close(sockfd);
@@ -49,7 +51,6 @@ void close_on_exit(int signo) {
     }
     free(tracker.files);
     exit(0);
-    return;
 }
 
 void error(char *msg) {
@@ -171,12 +172,10 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     }*/
 }
 
-int main(int argc, char *argv[]) {
-    create_log();
+int main() {
+    log_file = open_log();
     config conf = read_config();
-
     int opt = TRUE;
-    (void) tracker; // To remove Unused variable warning
     old_handler = signal(SIGINT, close_on_exit);
 
     int sockfd, newsockfd, portno;
@@ -220,6 +219,8 @@ int main(int argc, char *argv[]) {
     fd_set readfds;
     inet_ntop(AF_INET, &(serv_addr.sin_addr), tracker_ip, INET_ADDRSTRLEN);
     printf("\033[92mReady on %s:%d\033[39m\n", tracker_ip, portno);
+    write_log("Ready on %s:%d\n", tracker_ip, portno);
+
     while (1) {
         FD_ZERO(&readfds); // Clear the socket set
         FD_SET(sockfd, &readfds); // Add master socket to set

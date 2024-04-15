@@ -18,6 +18,7 @@
 #include "thpool.h"
 #include "tools.h"
 #include "tracker.h"
+#include "config.h"
 
 #ifndef NB_THREADS
 #define NB_THREADS 2
@@ -171,10 +172,8 @@ void handle_client_connection(void *newsockfd_void_ptr) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "ERROR, no port provided\n");
-        exit(1);
-    }
+    create_log();
+    config conf = read_config();
 
     int opt = TRUE;
     (void) tracker; // To remove Unused variable warning
@@ -197,14 +196,21 @@ int main(int argc, char *argv[]) {
     if (sockfd < 0)
         error("ERROR opening socket");
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
-    portno = atoi(argv[1]);
+    portno = conf.listen_port; //atoi(argv[1]);
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt,
                    sizeof(opt)) < 0) {
         error("setsockopt");
     }
 
+    char tracker_ip[INET_ADDRSTRLEN];
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    if (!conf.IP_mode)
+        serv_addr.sin_addr.s_addr = inet_addr(conf.IP);
+    else if (conf.IP_mode==1)
+        serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    else // Et ouais
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
         error("ERROR on binding");
@@ -212,7 +218,8 @@ int main(int argc, char *argv[]) {
     listen(sockfd, 5);
     clilen = sizeof(cli_addr);
     fd_set readfds;
-    printf("\033[92mReady on %s:%d\033[39m\n", inet_ntoa(serv_addr.sin_addr), portno);
+    inet_ntop(AF_INET, &(serv_addr.sin_addr), tracker_ip, INET_ADDRSTRLEN);
+    printf("\033[92mReady on %s:%d\033[39m\n", tracker_ip, portno);
     while (1) {
         FD_ZERO(&readfds); // Clear the socket set
         FD_SET(sockfd, &readfds); // Add master socket to set

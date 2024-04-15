@@ -78,7 +78,7 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
     } else if (streqlim(message, "getfile", 7)) {
         getfileData gfData = getfileCheck(message);
         if (gfData.is_valid) {
-        getfile(tracker, &gfData, socket_fd);
+            getfile(tracker, &gfData, socket_fd);
             return 0;
         }
     } else if (streqlim(message, "update", 6)) {
@@ -99,22 +99,37 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     char buffer[256] = {0};
     int index = 0;
     int n = 0;
-    for (int i = 0; i < MAX_PEERS; ++i) {
-        if (client_socket[i] == client_sockfd) {
-            index = i;
+    for (; n < MAX_PEERS; ++n) {
+        if (client_socket[n] == client_sockfd) {
+            index = n;
             break;
         }
+
     }
+    if (n == MAX_PEERS) {
+        printf("Client not found (fd:%d).\n", client_sockfd);
+        return;
+    }
+    n = 0;
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    getpeername(client_sockfd, (struct sockaddr *) &addr, &addr_size);
+    char clientip[MAX_IP_ADDR_SIZE];
+    strcpy(clientip, inet_ntoa(addr.sin_addr));
+    int port = ntohs(addr.sin_port);
+
     // memset(buffer, 0, 256);
     while (1) {
         n += read(client_sockfd, buffer + n, 255);
         if (n < 0) {
-            error("ERROR reading from socket");
+            printf("[%s:%d]: Error reading from socket. errno:%d\n", clientip, port, errno);
+            write_log("[%s:%d]: Error reading from socket. errno:%d\n", clientip, port, errno);
             break;
         }
         if (n == 0) {
             // Le client a fermé la connexion
-            printf("Client disconnected\n");
+            printf("[%s:%d]: Client disconnected.\n", clientip, port);
+            write_log("[%s:%d]: Client disconnected.\n", clientip, port);
             if (client_socket[index] == sockfd) {
                 client_socket[index] = 0;
                 bad_attempts[index] = 0;
@@ -128,7 +143,9 @@ void handle_client_connection(void *newsockfd_void_ptr) {
 
     buffer[strcspn(buffer, "\r\n")] = 0;
     if (strcmp(buffer, "exit") == 0) {
-        printf("Client requested to disconnect.\n");
+        printf("[%s:%d]: Client requested to disconnect.\n", clientip, port);
+        write_log("[%s:%d]: Client requested to disconnect.\n", clientip, port);
+
         if (client_socket[index] == sockfd) {
             client_socket[index] = 0;
             bad_attempts[index] = 0;
@@ -136,21 +153,18 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         }
         return;
     }
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(struct sockaddr_in);
-    getpeername(client_sockfd, (struct sockaddr *) &addr, &addr_size);
-    char clientip[MAX_IP_ADDR_SIZE];
-    strcpy(clientip, inet_ntoa(addr.sin_addr));
-    int port = ntohs(addr.sin_port);
-    printf("Message reçu de \033[0;33m%s:%d\033[39m: %s\n", clientip, port, buffer);
 
+    printf("[\033[0;33m%s:%d\033[39m]: %s\n", clientip, port, buffer);
+    write_log("[%s:%d]: %s\n", clientip, port, buffer);
     // Vérifie si le message est bien formaté
     int check = handle_message(buffer, &tracker, clientip, client_sockfd, index); // Replace NULL by addr_ip
     if (check == 1) { // Message mal formaté
         ++bad_attempts[index];
+        write_log("[%s:%d] Invalid message.\n", clientip, port);
         if (bad_attempts[index] >= 3) {
             printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion avec \033[0;33m%s:%d\033[39m.\033[39m\n",
                    clientip, port);
+            write_log("[%s:%d] Closing connection after to 3 consecutive errors.\n", clientip, port);
             client_socket[index] = 0;
             close(client_sockfd);
             return;
@@ -159,11 +173,6 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         // Message bien formaté, réinitialiser le compteur d'erreurs
         bad_attempts[index] = 0;
     }
-    /*n = write(client_sockfd, "I got your message\n", 19);
-    if (n < 0) {
-        error("ERROR writing to socket");
-        return;
-    }*/
 }
 
 int main() {
@@ -178,7 +187,7 @@ int main() {
     struct sockaddr_in serv_addr, cli_addr;
 
     init_tracker(&tracker);
-    for (int i=0; i<MAX_PEERS; ++i)
+    for (int i = 0; i < MAX_PEERS; ++i)
         connected_peers[i] = NULL;
 
     // Initialiser le pool de threads
@@ -199,7 +208,7 @@ int main() {
     serv_addr.sin_family = AF_INET;
     if (!conf.IP_mode)
         serv_addr.sin_addr.s_addr = inet_addr(conf.IP);
-    else if (conf.IP_mode==1)
+    else if (conf.IP_mode == 1)
         serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     else // Et ouais
         serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -222,17 +231,14 @@ int main() {
 
         for (int i = 0; i < MAX_PEERS; i++) { // Add child sockets to set
             sd = client_socket[i]; // socket descriptor
-
             if (sd > 0) // Only add valid socket descriptors to read list
                 FD_SET(sd, &readfds);
-
             if (sd > max_sd) // Highest file descriptor number for the select function
                 max_sd = sd;
         }
 
         // Wait indefinitely for an activity on one of the sockets
         activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
-
         if ((activity < 0) && (errno != EINTR)) {
             printf("select error");
         }
@@ -241,37 +247,39 @@ int main() {
         if (FD_ISSET(sockfd, &readfds)) {
             if ((newsockfd = accept(sockfd,
                                     (struct sockaddr *) &cli_addr, (socklen_t * ) & clilen)) < 0) {
-                error("accept");
+                printf("Couldn't accept connection.");
+                write_log("Couldn't accept connection.");
             }
 
             // Inform user of socket number - used in send and receive commands
             printf("New connection, socket fd: %d, \033[0;33m%s:%d\033[39m.\033[39m \n", newsockfd,
                    inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
+            write_log("New connection: socket fd %d, %s:%d.\n", newsockfd,
+                      inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
 
-            /*char *message = "ECHO Daemon v1.0 \r\n";
-            // Send new connection greeting message
-            if (send(newsockfd, message, strlen(message), 0) != strlen(message)) {
-                perror("send");
-            }*/
-
+            int check_fd;
             // Add new socket to array of sockets
-            for (int i = 0; i < MAX_PEERS; ++i) {
-                if (client_socket[i] == 0) {
-                    client_socket[i] = newsockfd;
-                    printf("Adding to list of sockets as %d at %d\n", newsockfd, i);
+            for (check_fd = 0; check_fd < MAX_PEERS; ++check_fd) {
+                if (client_socket[check_fd] == 0) {
+                    client_socket[check_fd] = newsockfd;
+                    printf("Adding \033[0;33m%s:%d\033[39m to list of sockets as %d at %d.\n", inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), newsockfd, check_fd);
+                    write_log("Adding %s:%d to list of sockets as %d at %d.\n", inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), newsockfd, check_fd);
                     break;
                 }
+            }
+            if (check_fd == MAX_PEERS) {
+                printf("Cannot accept more connections. Maximum number of peers reached.\n");
+                write_log("Cannot accept more connections. Maximum number of peers reached.\n");
+                close(newsockfd);
             }
         }
 
         // Handle what happened to the active connections
         for (int i = 0; i < MAX_PEERS; i++) {
             sd = client_socket[i];
-
             if (sd > 0 && FD_ISSET(sd, &readfds)) {
                 // Soumettre la gestion de chaque nouvelle connexion au pool de threads
                 thpool_add_work(thpool, (void (*)(void *)) handle_client_connection, (void *) (intptr_t) sd);
-
             }
         }
         thpool_wait(thpool);

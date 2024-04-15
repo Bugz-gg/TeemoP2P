@@ -1,3 +1,5 @@
+src/tracker/server
+
 # Prerequisites
 *.d
 
@@ -6,7 +8,7 @@
 *.ko
 *.obj
 *.elf
-
+*.log
 # Linker output
 *.ilk
 *.map
@@ -69,3 +71,6 @@ dkms.conf
 # Go workspace file
 go.work
 share/
+
+.DS_Store
+.idea

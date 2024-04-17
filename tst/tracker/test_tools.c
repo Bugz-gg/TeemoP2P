@@ -181,7 +181,7 @@ void test_update() {
     assert(updateStructCmp(data5, not_valid));
     updateData data6 = updateCheck("update seed [jzi784sfnt8SBA8NS8AZNY8SN9dkzo83h]");
     assert(updateStructCmp(data6, not_valid));
-    free_regex(comparison_regex());
+    free_regex(update_regex());
     printf("\033[92mpassed\033[39m\n");
 }
 

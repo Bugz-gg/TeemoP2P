@@ -26,6 +26,7 @@ static sig_t old_handler;
 static int sockfd;
 int client_socket[MAX_PEERS] = {0};
 int bad_attempts[MAX_PEERS] = {0};
+int ports[MAX_PEERS] = {0};
 Peer *connected_peers[MAX_PEERS];
 FILE *log_file;
 
@@ -37,10 +38,15 @@ void close_on_exit(int signo) {
     free_all_regex();
     //free_on_exit(signo);
     (void) signo;
-    for (int i = 0; i < tracker.nb_peers; ++i)
+    for (int i = 0; i < tracker.max_peer_ind; ++i) {
+        if (tracker.peers[i] == NULL)
+            continue;
         free_peer(tracker.peers[i]);
+    }
     free(tracker.peers);
-    for (int i = 0; i < tracker.nb_files; ++i) {
+    for (int i = 0; i < tracker.max_file_ind; ++i) {
+        if (tracker.files[i] == NULL)
+            continue;
         free_file(tracker.files[i]);
     }
     free(tracker.files);
@@ -84,8 +90,10 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
     } else if (streqlim(message, "update", 6)) {
         updateData uData = updateCheck(message);
         if (uData.is_valid) {
-            // Handle data
+            update(tracker, &uData, socket_fd, index);
             free_updateData(&uData);
+            print_tracker_files(tracker);
+            print_tracker_peers(tracker);
             return 0;
         }
         free_updateData(&uData);
@@ -130,9 +138,12 @@ void handle_client_connection(void *newsockfd_void_ptr) {
             // Le client a fermé la connexion
             printf("[%s:%d]: Client disconnected.\n", clientip, port);
             write_log("[%s:%d]: Client disconnected.\n", clientip, port);
-            if (client_socket[index] == sockfd) {
+            if (client_socket[index] == client_sockfd) {
+                remove_peer_all_files(&tracker, connected_peers[index]);
                 client_socket[index] = 0;
                 bad_attempts[index] = 0;
+                ports[index] = 0;
+                connected_peers[index] = NULL;
                 close(client_sockfd);
             }
             return;
@@ -143,12 +154,15 @@ void handle_client_connection(void *newsockfd_void_ptr) {
 
     buffer[strcspn(buffer, "\r\n")] = 0;
     if (strcmp(buffer, "exit") == 0) {
-        printf("[%s:%d]: Client requested to disconnect.\n", clientip, port);
-        write_log("[%s:%d]: Client requested to disconnect.\n", clientip, port);
+        printf("[\033[0;33m%s:%d\033[39m] Client requested to disconnect.\n", clientip, port);
+        write_log("[%s:%d] Client requested to disconnect.\n", clientip, port);
 
-        if (client_socket[index] == sockfd) {
+        if (client_socket[index] == client_sockfd) {
+            remove_peer_all_files(&tracker, connected_peers[index]);
             client_socket[index] = 0;
             bad_attempts[index] = 0;
+            ports[index] = 0;
+            connected_peers[index] = NULL;
             close(client_sockfd);
         }
         return;

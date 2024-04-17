@@ -27,6 +27,7 @@ typedef struct {
     int pieceSize;
     char key[33];
     int nb_peers;
+    int max_peer_ind;
     int alloc_peers;
     Peer **peers;
     char name[MAX_FILE_NAME_SIZE];
@@ -75,7 +76,9 @@ typedef struct {
     Peer **peers;
     File **files;
     int nb_files;
+    int max_file_ind;
     int nb_peers;
+    int max_peer_ind;
     int alloc_files;
     int alloc_peers;
 } Tracker;

@@ -15,6 +15,10 @@ unsigned int countDelim(const char *str) { //  Seulement si DELIM ne fait qu'un 
     return count + (count > 0);
 }
 
+void max(int *a, int b) {
+    *a = (*a<b) ? b: *a;
+}
+
 int streq(const char *str1, const char *str2) {
     return !strcmp(str1, str2);
 }

@@ -8,6 +8,7 @@
 #define DELIM " "
 #define PORT_MAX_LENGTH 5
 
+void max(int *, int);
 int streq(const char *, const char *);
 int streqlim(const char *, const char *, int);
 

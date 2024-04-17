@@ -293,4 +293,11 @@ func (f *File) GetFile() (string, int, int, string, bool) {
 	return f.Name, f.Size, f.PieceSize, f.Key, true
 }
 
+func (f *File) GetFileUpdate() (string, []byte, bool) {
+	if f.Name == "" && f.Size == 0 {
+		return f.Key, f.Peers["self"].BufferMaps[f.Key].BitSequence, false
+	}
+	return f.Key, f.Peers["self"].BufferMaps[f.Key].BitSequence, true
+}
+
 // Fonction de mise à jour des peers

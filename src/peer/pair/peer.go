@@ -29,7 +29,7 @@ func (p *Peer) IsEmpty() bool {
 func errorCheck(err error) {
 	if err != nil {
 		fmt.Println("Error:", err)
-		// panic(err)
+		panic(err)
 	}
 }
 
@@ -57,10 +57,14 @@ func StartPeer(IP string, Port string, Type string) Peer {
 		Comm:  make(map[string]net.Conn),
 	}
 	peer.Files = tools.FillFilesFromConfig()
+	fmt.Println(peer.Files)
 	tools.LocalFiles = &peer.Files // TODO : Change this.
-	tools.RemoteFiles = peer.Files
+	peer.Files[peer.IP+":"+peer.Port] = peer.Files["self"]
+	// tools.RemoteFiles = peer.Files
 	// fmt.Println(peer.Files, peer.Files["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap, tools.RemoteFiles["971158fe5b6f5cd9bff3d3ac747ccae7"].BufferMap)
 	go peer.startListening()
+	time.Sleep(time.Second)
+	go peer.sendupdate(track)
 	time.Sleep(time.Second)
 	peer.HelloTrack(track)
 	return peer

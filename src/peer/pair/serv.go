@@ -124,8 +124,32 @@ func worker(jobs chan Job, p *Peer) {
 
 				}
 			}
+			// TODO : Faire en sorte que ça s" envoie toutes les 3 dl de pieces.
 		case "have", "have\n":
-			_, _ = tools.HaveCheck(mess)
+			valid, data := tools.HaveCheck(mess)
+			if valid {
+				response := "have " + data.Key + " " + tools.BufferMapToString(*p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key])
+				_, err := conn.Write([]byte(response))
+				errorCheck(err)
+			} else {
+				attempts.Lock()
+				attempts.m[conn]--
+				attempt--
+				attempts.Unlock()
+				if attempt == 0 {
+					buffer := "Invalid command you have no tries remaining, connection is closed..."
+					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					_, err := conn.Write([]byte(buffer))
+					conn.Close()
+					errorCheck(err)
+
+				} else {
+					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
+					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					_, err := conn.Write([]byte(buffer))
+					errorCheck(err)
+				}
+			}
 		case "exit", "exit\n":
 			conn.Close()
 			return

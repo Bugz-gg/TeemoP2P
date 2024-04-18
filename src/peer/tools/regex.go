@@ -134,7 +134,7 @@ func ListCheck(message string) (bool, ListData) {
 				return false, ListData{}
 			}
 			if _, valid := RemoteFiles[key]; !valid { // If not registered as a RemoteFile.
-				RemoteFiles[key] = &File{Name: filename, Size: size, PieceSize: pieceSize, Key: key} // Update the registered remote files.
+				RemoteFiles[key] = &File{Name: filename, Size: size, PieceSize: pieceSize, Key: key, Peers: make(map[string]*Peer)} // Update the registered remote files.
 			}
 			file := RemoteFiles[key]
 			// file := File{Name: filename, Size: size, PieceSize: pieceSize, Key: key} //, BufferMap: BufferMap{Length: size / pieceSize, BitSequence: make([]byte, (size-1)/pieceSize/8+1)}}
@@ -277,6 +277,9 @@ func PeersCheck(message string) bool {
 			peerId := fmt.Sprintf("%s:%d", info[0], port)
 			if _, valid := AllPeers[peerId]; !valid { // If it is the first time learning about a peer.
 				AllPeers[peerId] = &Peer{IP: info[0], Port: port}
+			}
+			if _, valid := RemoteFiles[match[1]].Peers[peerId]; !valid { // Add peer to owners of the remote file if not already in.
+				RemoteFiles[match[1]].Peers[peerId] = AllPeers[peerId]
 			}
 
 			peers[peerId] = AllPeers[peerId] // Add peer to list of peers having the file.

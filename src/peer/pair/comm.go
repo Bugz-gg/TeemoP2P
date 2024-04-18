@@ -44,6 +44,8 @@ func (p *Peer) sendupdate(t Peer) {
 	var seed string
 	var leech string
 	for {
+		seed = ""
+		leech = ""
 		updateValue, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "update_time"))
 		time.Sleep(time.Duration(float64(updateValue) * math.Pow(10, 9)))
 		message := "update seed ["
@@ -51,7 +53,8 @@ func (p *Peer) sendupdate(t Peer) {
 			key, BitSequence, notEmpty := valeur.GetFileUpdate()
 			if notEmpty {
 				temp := 0
-				for k := range len(BitSequence) {
+				// for k := range len(BitSequence) {
+				for k := 0; k < len(BitSequence); k++ {
 					if !tools.ByteArrayCheck(BitSequence, k) {
 						temp++
 					}
@@ -70,7 +73,6 @@ func (p *Peer) sendupdate(t Peer) {
 		message += seed + "] leech [" + leech + "]\n"
 		conn, err := net.Dial("tcp", t.IP+":"+t.Port)
 		errorCheck(err)
-		message = string(message)
 		_, err = conn.Write([]byte(message))
 		errorCheck(err)
 	}
@@ -143,6 +145,8 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			valid, data := tools.HaveCheck(mess)
 
 			if valid {
+				tools.BufferMapCopy(&data.BufferMap, tools.RemoteFiles[data.Key].Peers[conn.RemoteAddr().String()].BufferMaps[data.Key]) // TODO Debug
+
 				go p.progression(data.Key, p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key].Length, conn)
 				fmt.Println(conn.RemoteAddr(), ": > ", mess)
 			} else {

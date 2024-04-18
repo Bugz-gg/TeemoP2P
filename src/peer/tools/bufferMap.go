@@ -46,6 +46,23 @@ func BufferMapWrite(bufferMap *BufferMap, index int) {
 	ByteArrayWrite(&(bufferMap.BitSequence), index)
 }
 
+// BufferMapErase uses ByteArrayErase to write a 0 at the `index` position.
+func BufferMapErase(bufferMap *BufferMap, index int) {
+	ByteArrayErase(&(bufferMap.BitSequence), index)
+}
+
+// BufferMapCopy copies a BufferMap into another.
+func BufferMapCopy(dst *BufferMap, src *BufferMap) {
+	//for i := range dst.Length { // TODO
+	for i := 0; i < dst.Length; i++ {
+		if ByteArrayCheck(src.BitSequence, i) {
+			ByteArrayWrite(&dst.BitSequence, i)
+		} else {
+			ByteArrayErase(&dst.BitSequence, i)
+		}
+	}
+}
+
 // StringToBufferMap transforms a string of `0` and `1` into a BufferMap.
 func StringToBufferMap(str string) BufferMap {
 	array := make([]byte, (len(str)-1)/8+1)

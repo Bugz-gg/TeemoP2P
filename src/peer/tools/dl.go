@@ -80,7 +80,8 @@ func fillStruct(files []string, conn string) map[string]*File {
 			BufferMaps: bufferMaps,
 		}
 		fil.Peers[conn] = fil.Peers["self"]
-		for u := range BufferSize(fil) {
+		// for u := range BufferSize(fil) {
+		for u := 0; u < BufferSize(fil); u++ {
 			BufferMapWrite(&(*(fil.Peers["self"].BufferMaps)[fil.Key]), u)
 		}
 		// fmt.Println(fil.BufferMap)

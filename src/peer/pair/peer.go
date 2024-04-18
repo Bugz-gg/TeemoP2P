@@ -29,7 +29,7 @@ func (p *Peer) IsEmpty() bool {
 func errorCheck(err error) {
 	if err != nil {
 		fmt.Println("Error:", err)
-		panic(err)
+		// panic(err)
 	}
 }
 

@@ -47,14 +47,14 @@ func inputProg() {
 	var MyPeer peer.Peer
 	fmt.Println("Welcome on Teemo2P !")
 	for {
-		fmt.Print("Enter a command : ")
+		fmt.Print("Enter a command :")
 		command := readInput()
 		if len(command) <= 0 {
 			continue
 		} else {
 			switch command[0] {
 			case "launch a peer", "lp":
-				fmt.Print("Got it, Give me his IP & Port : ")
+				fmt.Print("Got it, Give me his IP & Port :")
 				input := readInput()
 				if len(input) == 0 {
 					MyPeer = peer.StartPeer("localhost", "3000", "online")
@@ -67,7 +67,7 @@ func inputProg() {
 				}
 			case "co", "connect":
 				if !MyPeer.IsEmpty() {
-					fmt.Print("Enter the IP and port of peer you want to connect to: ")
+					fmt.Print("Enter the IP and port of peer you want to connect to:")
 					input := readInput()
 					if len(input) == 2 {
 						MyPeer.ConnectTo(input[0], input[1])

@@ -91,7 +91,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	} else {
 		message = mess[0]
 	}
-	fmt.Println(conn.LocalAddr().String(), ": < ", message)
+	fmt.Println(conn.LocalAddr().String(), ":", message)
 	if message == "exit\n" {
 		os.Exit(1)
 	}
@@ -109,7 +109,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			fmt.Printf("%s\n", mess)
 			valid, data := tools.DataCheck(mess)
 			if valid {
-				fmt.Println(conn.RemoteAddr(), ": > ", mess)
+				fmt.Println(conn.RemoteAddr(), ":", mess)
 				// fmt.Println("ET OUAIS .....")
 				os.MkdirAll(filepath.Join("./", tools.GetValueFromConfig("Peer", "path"), "/", "tabernak"), os.FileMode(0777))
 				file := p.Files[data.Key]
@@ -148,23 +148,23 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				tools.BufferMapCopy(&data.BufferMap, tools.RemoteFiles[data.Key].Peers[conn.RemoteAddr().String()].BufferMaps[data.Key]) // TODO Debug
 
 				go p.progression(data.Key, p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key].Length, conn)
-				fmt.Println(conn.RemoteAddr(), ": > ", mess)
+				fmt.Println(conn.RemoteAddr(), ":", mess)
 			} else {
 				fmt.Println("Invalid have response...")
 			}
 		case "OK", "OK\n":
-			fmt.Println(conn.RemoteAddr(), ": > ", mess)
+			fmt.Println(conn.RemoteAddr(), ":", mess)
 		case "list", "list\n":
 			valid, _ := tools.ListCheck(mess)
 			if valid {
-				fmt.Println(conn.RemoteAddr(), ": > ", mess)
+				fmt.Println(conn.RemoteAddr(), ":", mess)
 			} else {
 				fmt.Println("Invalid list response...")
 			}
 		case "peers", "peers\n":
 			valid := tools.PeersCheck(mess)
 			if valid {
-				fmt.Println(conn.RemoteAddr(), ": > ", mess)
+				fmt.Println(conn.RemoteAddr(), ":", mess)
 				p.interested(string(input[1]))
 			} else {
 				fmt.Println("Invalid peers response...")

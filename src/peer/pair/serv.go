@@ -56,7 +56,7 @@ func worker(jobs chan Job, p *Peer) {
 				// fmt.Println("in if")
 				file := p.Files[data.Key]
 				buff := "have " + data.Key + " " + tools.BufferMapToString(*file.Peers["self"].BufferMaps[data.Key]) + "\n"
-				fmt.Print(conn.LocalAddr(), "> ", buff)
+				fmt.Print(conn.LocalAddr(), buff)
 				_, err := conn.Write([]byte(buff))
 				errorCheck(err)
 				break
@@ -67,21 +67,21 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.Unlock()
 				if attempt == 0 {
 					buffer := "Invalid command you have no tries remaining, connection is closed..."
-					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					conn.Close()
 					errorCheck(err)
 
 				} else {
 					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
-					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					errorCheck(err)
 
 				}
 			}
 		case "getpieces", "getpieces\n":
-			fmt.Println(conn.RemoteAddr().String(), ": <", mess)
+			fmt.Println(conn.RemoteAddr().String(), ":", mess)
 			valid, data := tools.GetPiecesCheck(mess)
 			if valid {
 				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
@@ -100,7 +100,7 @@ func worker(jobs chan Job, p *Peer) {
 				}
 				response = strings.TrimSuffix(response, " ")
 				response += "]"
-				fmt.Println(conn.LocalAddr().String(), ": >", response)
+				fmt.Println(conn.LocalAddr().String(), ":", response)
 				_, err = conn.Write([]byte(response))
 				errorCheck(err)
 				break
@@ -111,14 +111,14 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.Unlock()
 				if attempt == 0 {
 					buffer := "Invalid command you have no tries remaining, connection is closed..."
-					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					conn.Close()
 					errorCheck(err)
 
 				} else {
 					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
-					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					errorCheck(err)
 
@@ -138,14 +138,14 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.Unlock()
 				if attempt == 0 {
 					buffer := "Invalid command you have no tries remaining, connection is closed..."
-					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					conn.Close()
 					errorCheck(err)
 
 				} else {
 					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
-					fmt.Println(conn.LocalAddr(), "> ", buffer)
+					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					errorCheck(err)
 				}
@@ -160,14 +160,14 @@ func worker(jobs chan Job, p *Peer) {
 			attempts.Unlock()
 			if attempt == 0 {
 				buffer := "Invalid command you have no tries remaining, connection is closed..."
-				fmt.Println(conn.LocalAddr(), "> ", buffer)
+				fmt.Println(conn.LocalAddr(), buffer)
 				_, err := conn.Write([]byte(buffer))
 				conn.Close()
 				errorCheck(err)
 
 			} else {
 				buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
-				fmt.Println(conn.LocalAddr(), "> ", buffer)
+				fmt.Println(conn.LocalAddr(), buffer)
 				_, err := conn.Write([]byte(buffer))
 				errorCheck(err)
 

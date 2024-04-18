@@ -104,7 +104,7 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
 // Fonction pour gérer les connexions clients dans des threads
 void handle_client_connection(void *newsockfd_void_ptr) {
     int client_sockfd = (int) (intptr_t) newsockfd_void_ptr;
-    char buffer[256] = {0};
+    char buffer[32768] = {0};
     int index = 0;
     int n = 0;
     for (; n < MAX_PEERS; ++n) {
@@ -134,10 +134,14 @@ void handle_client_connection(void *newsockfd_void_ptr) {
             write_log("[%s:%d]: Error reading from socket. errno:%d\n", clientip, port, errno);
             break;
         }
+        if (n>32768) { // Voir avec taille de `buffer` un peu plus haut.
+            write_log("[%s:%d] Message too long.\n", clientip, port);
+            return;
+        }
         if (n == 0) {
             // Le client a fermé la connexion
-            printf("[%s:%d]: Client disconnected.\n", clientip, port);
-            write_log("[%s:%d]: Client disconnected.\n", clientip, port);
+            printf("[%s:%d]Client disconnected.\n", clientip, port);
+            write_log("[%s:%d] Client disconnected.\n", clientip, port);
             if (client_socket[index] == client_sockfd) {
                 remove_peer_all_files(&tracker, connected_peers[index]);
                 client_socket[index] = 0;

@@ -39,6 +39,42 @@ func (p *Peer) HelloTrack(t Peer) {
 	p.Comm[conn.RemoteAddr().String()] = conn
 }
 
+func (p *Peer) sendupdate(t Peer) {
+	var seed string
+	var leech string
+	for {
+		updateValue, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "update_time"))
+		time.Sleep(time.Duration(updateValue))
+		message := "update seed ["
+		for _, valeur := range p.Files {
+			key, BitSequence, notEmpty := valeur.GetFileUpdate()
+			if notEmpty {
+				temp := 0
+				for k := range len(BitSequence) {
+					if !tools.ByteArrayCheck(BitSequence, k) {
+						temp++
+					}
+				}
+				if temp > 0 {
+					leech += fmt.Sprintf(`%s `, key)
+				} else {
+					seed += fmt.Sprintf(`%s `, key)
+				}
+			} else {
+				break
+			}
+		}
+		seed = strings.TrimSuffix(seed, " ")
+		leech = strings.TrimSuffix(leech, " ")
+		message += seed + "]" + "[" + leech + "]\n"
+		conn, err := net.Dial("tcp", t.IP+":"+t.Port)
+		errorCheck(err)
+		message = string(message)
+		_, err = conn.Write([]byte(message))
+		errorCheck(err)
+	}
+}
+
 // TODO : Remote file stockage lors d une demande au tracker
 // TODO : Faire les chanegement dans les fonctions car changement de []file en map.
 // TODO : Finir la gestion des messages notamment le dl et du buffermap avec les fonctions de tools.
@@ -103,8 +139,10 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				fmt.Println("Invalid data response...")
 			}
 		case "have", "have\n":
-			valid, _ := tools.HaveCheck(mess)
+			valid, data := tools.HaveCheck(mess)
+
 			if valid {
+				go p.progression(data.Key, p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key].Length, conn)
 				fmt.Println(conn.RemoteAddr(), ": > ", mess)
 			} else {
 				fmt.Println("Invalid have response...")
@@ -154,6 +192,17 @@ func (p *Peer) interested(key string) {
 	}
 }
 
+func (p *Peer) progression(key string, length int, conn net.Conn) {
+	i, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "progress_value"))
+	for {
+		if file, valid := p.Files["self"]; valid {
+			if file.Peers[conn.LocalAddr().String()].BufferMaps[key].Length == length+i {
+				WriteReadConnection(conn, p, "have "+key+" "+tools.BufferMapToString(*file.Peers[conn.LocalAddr().String()].BufferMaps[key]))
+				i = 0
+			}
+		}
+	}
+}
 func (p *Peer) ConnectTo(IP string, Port string, mess ...string) {
 	conn, err := net.Dial("tcp", IP+":"+Port)
 	errorCheck(err)

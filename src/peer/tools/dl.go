@@ -71,6 +71,9 @@ func fillStruct(files []string) map[string]*File {
 		buffermap := InitBufferMap(fil.Size, fil.PieceSize)
 		bufferMaps[fil.Key] = &buffermap
 		//InitBufferMap(&fil)
+		if fil.Peers == nil {
+			fil.Peers = make(map[string]*Peer)
+		}
 		fil.Peers["self"] = &Peer{
 			IP:         "",
 			Port:       0,

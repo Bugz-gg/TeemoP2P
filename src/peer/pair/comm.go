@@ -3,6 +3,7 @@ package peer_package
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"math/rand"
 	"net"
 	"os"
@@ -32,7 +33,7 @@ func (p *Peer) HelloTrack(t Peer) {
 	message = string(message)
 	_, err = conn.Write([]byte(message))
 	errorCheck(err)
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 32768)
 	n, err := conn.Read(buffer)
 	errorCheck(err)
 	fmt.Print("< ", string(buffer[:n]))
@@ -44,7 +45,7 @@ func (p *Peer) sendupdate(t Peer) {
 	var leech string
 	for {
 		updateValue, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "update_time"))
-		time.Sleep(time.Duration(updateValue))
+		time.Sleep(time.Duration(float64(updateValue) * math.Pow(10, 9)))
 		message := "update seed ["
 		for _, valeur := range p.Files {
 			key, BitSequence, notEmpty := valeur.GetFileUpdate()
@@ -66,7 +67,7 @@ func (p *Peer) sendupdate(t Peer) {
 		}
 		seed = strings.TrimSuffix(seed, " ")
 		leech = strings.TrimSuffix(leech, " ")
-		message += seed + "]" + "[" + leech + "]\n"
+		message += seed + "] leech [" + leech + "]\n"
 		conn, err := net.Dial("tcp", t.IP+":"+t.Port)
 		errorCheck(err)
 		message = string(message)

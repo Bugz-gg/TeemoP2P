@@ -11,7 +11,7 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-func FillFilesFromConfig() map[string]*File {
+func FillFilesFromConfig(conn string) map[string]*File {
 	path := GetValueFromConfig("Peer", "path")
 	if path == "" {
 		return nil
@@ -22,7 +22,7 @@ func FillFilesFromConfig() map[string]*File {
 		return nil
 	}
 
-	return fillStruct(files)
+	return fillStruct(files, conn)
 }
 
 func searchFiles(path string) ([]string, error) {
@@ -42,7 +42,7 @@ func searchFiles(path string) ([]string, error) {
 	return files, nil
 }
 
-func fillStruct(files []string) map[string]*File {
+func fillStruct(files []string, conn string) map[string]*File {
 	result := make(map[string]*File)
 	bufferMaps := make(map[string]*BufferMap)
 	for _, filePath := range files {
@@ -79,6 +79,7 @@ func fillStruct(files []string) map[string]*File {
 			Port:       0,
 			BufferMaps: bufferMaps,
 		}
+		fil.Peers[conn] = fil.Peers["self"]
 		for u := range BufferSize(fil) {
 			BufferMapWrite(&(*(fil.Peers["self"].BufferMaps)[fil.Key]), u)
 		}

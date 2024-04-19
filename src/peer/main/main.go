@@ -20,14 +20,14 @@ func readInput() []string {
 }
 
 func handlePeer(MyPeer *peer.Peer, action string) {
-	fmt.Print("Enter the IP and port of peer you want to ", action, " :")
+	fmt.Print("\u001B[92mEnter the IP and port of peer you want to ", action, " :\u001B[39m")
 	input := readInput()
 	if len(input) == 2 {
 		if input[0] == "localhost" {
 			input[0] = "127.0.0.1"
 		}
 		if MyPeer.Comm[input[0]+":"+input[1]] == nil {
-			fmt.Println("No such connection :(")
+			fmt.Println("\u001B[92mNo such connection :(\u001B[39m")
 			return
 		}
 		switch action {
@@ -36,25 +36,25 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 		case "close":
 			MyPeer.Close(input[0] + ":" + input[1])
 		default:
-			fmt.Println("Invalid action.")
+			fmt.Println("\u001B[92mInvalid action.\u001B[39m")
 		}
 	} else {
-		fmt.Println("Invalid input.")
+		fmt.Println("\u001B[92mInvalid input.\u001B[39m")
 	}
 }
 
-func inputProg() {
+func inputProg() { // \u001B[92m \u001B[39m
 	var MyPeer peer.Peer
-	fmt.Println("Welcome on Teemo2P !")
+	fmt.Println("\u001B[92mWelcome on Teemo2P !\u001B[32m")
 	for {
-		fmt.Print("Enter a command :")
+		fmt.Print("\u001B[92mEnter a command :\u001B[39m")
 		command := readInput()
 		if len(command) <= 0 {
 			continue
 		} else {
 			switch command[0] {
 			case "launch a peer", "lp":
-				fmt.Print("Got it, Give me his IP & Port :")
+				fmt.Print("\u001B[92mGot it, Give me his IP & Port :\u001B[32m")
 				input := readInput()
 				if len(input) == 0 {
 					MyPeer = peer.StartPeer("localhost", "3000", "online")
@@ -63,34 +63,34 @@ func inputProg() {
 				} else if len(input) == 1 {
 					MyPeer = peer.StartPeer("localhost", input[0], "online")
 				} else {
-					fmt.Println("Missing a field.")
+					fmt.Println("\u001B[92mMissing a field.\u001B[32m")
 				}
 			case "co", "connect":
 				if !MyPeer.IsEmpty() {
-					fmt.Print("Enter the IP and port of peer you want to connect to:")
+					fmt.Print("\u001B[92mEnter the IP and port of peer you want to connect to:\u001B[32m")
 					input := readInput()
 					if len(input) == 2 {
 						MyPeer.ConnectTo(input[0], input[1])
 					} else if len(input) == 1 {
 						MyPeer.ConnectTo("localhost", input[0])
 					} else {
-						fmt.Println("Invalid input.")
+						fmt.Println("\u001B[92mInvalid input.\u001B[32m")
 					}
 				} else {
-					fmt.Println("You need to launch a peer first.")
+					fmt.Println("\u001B[92mYou need to launch a peer first.\u001B[32m")
 				}
 			case "hd", "handle":
 				handlePeer(&MyPeer, "handle")
 			case "cl", "close":
 				handlePeer(&MyPeer, "close")
 			case "exit":
-				fmt.Println("Ending the program :(, before we are closing all connections.")
+				fmt.Println("\u001B[92mEnding the program :(, before we are closing all connections.\u001B[32m")
 				for key, _ := range MyPeer.Comm {
 					MyPeer.Close(key)
 				}
 				os.Exit(1)
 			default:
-				fmt.Println("Command not found here the list: lp (launch a peer), handle, close, exit")
+				fmt.Println("\u001B[92mCommand not found here the list: lp (launch a peer), handle, close, exit\u001B[32m")
 			}
 		}
 	}

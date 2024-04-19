@@ -85,7 +85,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	var message string
 	if len(mess) == 0 {
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Waiting for input... :")
+		fmt.Print("\u001B[92mWaiting for input... :\u001B[39m")
 		message, _ = reader.ReadString('\n')
 
 	} else {
@@ -139,7 +139,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				fdf.Close()
 				fdc.Close()
 			} else {
-				fmt.Println("Invalid data response...")
+				fmt.Println("\u001B[92mInvalid data response...\u001B[39m")
 			}
 		case "have", "have\n":
 			valid, data := tools.HaveCheck(mess)
@@ -150,7 +150,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				go p.progression(data.Key, p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key].Length, conn)
 				fmt.Println(conn.RemoteAddr(), ":", mess)
 			} else {
-				fmt.Println("Invalid have response...")
+				fmt.Println("\u001B[92mInvalid have response...\u001B[39m")
 			}
 		case "OK", "OK\n":
 			fmt.Println(conn.RemoteAddr(), ":", mess)
@@ -159,7 +159,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ":", mess)
 			} else {
-				fmt.Println("Invalid list response...")
+				fmt.Println("\u001B[92mInvalid list response...\u001B[39m")
 			}
 		case "peers", "peers\n":
 			valid := tools.PeersCheck(mess)
@@ -167,9 +167,9 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				fmt.Println(conn.RemoteAddr(), ":", mess)
 				p.interested(string(input[1]))
 			} else {
-				fmt.Println("Invalid peers response...")
+				fmt.Println("\u001B[92mInvalid peers response...\u001B[39m")
 			}
-		case "Invalid command you have no tries remaining, connection is closed...":
+		case "\u001B[92mInvalid command you have no tries remaining, connection is closed...\u001B[39m":
 			p.Close(conn.RemoteAddr().String())
 		default:
 			// panic("valeur par default et pas parmi la liste")

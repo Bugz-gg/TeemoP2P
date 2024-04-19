@@ -186,7 +186,8 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			valid := tools.PeersCheck(mess)
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ":", mess)
-				p.interested(string(input[1]))
+				key := strings.Split(mess, " ")[1]
+				p.interested(key)
 			} else {
 				fmt.Println("\u001B[92mInvalid peers response...\u001B[39m")
 			}

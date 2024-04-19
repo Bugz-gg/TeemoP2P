@@ -113,9 +113,7 @@ var PeersRegex = PeersRegexGen()
 func ListCheck(message string) (bool, ListData) {
 	if match := ListRegex().FindStringSubmatch(message); match != nil {
 		var filesData []string
-		if match[1] == "" {
-			filesData = []string{}
-		} else {
+		if match[1] != "" {
 			filesData = strings.Split(match[1], " ")
 		}
 		if len(filesData)%4 != 0 {

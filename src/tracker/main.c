@@ -66,7 +66,7 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
     if (streqlim(message, "announce", 8)) {
         announceData aData = announceCheck(message);
         if (aData.is_valid) {
-            connected_peers[index] = announce(tracker, &aData, addr_ip, socket_fd);
+            connected_peers[index] = announce(tracker, &aData, addr_ip, socket_fd, index);
             free_announceData(&aData);
             print_tracker_files(tracker);
             print_tracker_peers(tracker);
@@ -140,8 +140,8 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         }
         if (n == 0) {
             // Le client a fermé la connexion
-            printf("[%s:%d]Client disconnected.\n", clientip, port);
-            write_log("[%s:%d] Client disconnected.\n", clientip, port);
+            printf("(%d) [\033[0;33m%s:%d\033[39m] Client disconnected (\033[0;33m%s:%d\033[39m).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
+            write_log("(%d) [%s:%d] Client disconnected (%s:%d).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
             if (client_socket[index] == client_sockfd) {
                 remove_peer_all_files(&tracker, connected_peers[index]);
                 client_socket[index] = 0;

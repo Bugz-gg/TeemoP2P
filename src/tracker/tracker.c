@@ -132,7 +132,7 @@ void cond_realloc(void **ptr, int *nb_alloc, int nb, void *obj) {
     }
 }
 
-Peer *announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
+Peer *announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd, int index) {
     Peer target_peer = {.num_port=d->port};
     strcpy(target_peer.addr_ip, addr_ip);
     findings found_peer = find((void **) t->peers, t->max_peer_ind, &target_peer, *peer_cmp);
@@ -145,7 +145,7 @@ Peer *announce(Tracker *t, announceData *d, char *addr_ip, int socket_fd) {
                 sizeof(Peer)); // Alloue la place d'un Peer pour mettre son adresse dans t->peers
         peer = t->peers[found_peer.index];
         peer->num_port = d->port;
-        peer->peer_id = new_id(t, addr_ip, d->port);
+        peer->peer_id = index; //new_id(t, addr_ip, d->port);
         strcpy(peer->addr_ip, addr_ip);
         ++t->nb_peers;
         max(&t->max_peer_ind, t->nb_peers);

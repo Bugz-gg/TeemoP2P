@@ -5,7 +5,7 @@ static Tracker tracker;
 
 int new_id(Tracker *, char *, int);
 
-Peer *announce(Tracker *, announceData *, char *, int);
+Peer *announce(Tracker *, announceData *, char *, int, int);
 void look(Tracker *, lookData *, int);
 void getfile(Tracker *, getfileData *, int);
 void update(Tracker *, updateData *, int, int);

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 #include "tools.h"
 #include "tracker.h"
 #include "structs.h"
@@ -10,6 +11,7 @@
 #define MAX_PEERS 200
 
 extern Peer *connected_peers[MAX_PEERS];
+extern pthread_mutex_t mutex_for_connected_peers;
 
 char tmp_buffer[256]; // Used to send messages back.
 
@@ -276,7 +278,9 @@ void getfile(Tracker *t, getfileData *d, int socket_fd) {
 }
 
 void update(Tracker *t, updateData *d, int socket_fd, int index) {
+    pthread_mutex_lock(&mutex_for_connected_peers);
     Peer *peer = connected_peers[index];
+    pthread_mutex_unlock(&mutex_for_connected_peers);
     if (peer == NULL) { // Pas enregistré donc pas fait d'announce pour annoncer son port.
         return;
     }

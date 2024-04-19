@@ -87,6 +87,7 @@ void test_announce() {
     free_announceData(&data8);
     free_announceData(&data9);
     free_regex(announce_regex());
+    free(expected_data4.files);
     free(expected_files);
 
     printf("\033[92mpassed\033[39m\n");
@@ -182,6 +183,12 @@ void test_update() {
     updateData data6 = updateCheck("update seed [jzi784sfnt8SBA8NS8AZNY8SN9dkzo83h]");
     assert(updateStructCmp(data6, not_valid));
     free_regex(update_regex());
+    free_updateData(&data5);
+    free_updateData(&data6);
+    free_updateData(&data4);
+    free_updateData(&data3);
+    free_updateData(&data2);
+    free_updateData(&data);
     printf("\033[92mpassed\033[39m\n");
 }
 

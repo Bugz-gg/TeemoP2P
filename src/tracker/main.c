@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 #include "thpool.h"
 #include "tools.h"
 #include "tracker.h"
@@ -29,6 +30,10 @@ int bad_attempts[MAX_PEERS] = {0};
 int ports[MAX_PEERS] = {0};
 Peer *connected_peers[MAX_PEERS];
 FILE *log_file;
+
+pthread_mutex_t mutex_for_client_socket;
+pthread_mutex_t mutex_for_connected_peers;
+pthread_mutex_t mutex_for_bad_attempts;
 
 void close_on_exit(int signo) {
     fclose(log_file);
@@ -66,7 +71,10 @@ int handle_message(char *message, Tracker *tracker, char *addr_ip, int socket_fd
     if (streqlim(message, "announce", 8)) {
         announceData aData = announceCheck(message);
         if (aData.is_valid) {
-            connected_peers[index] = announce(tracker, &aData, addr_ip, socket_fd, index);
+
+            pthread_mutex_lock(&mutex_for_connected_peers);
+            connected_peers[index] = announce(tracker, &aData, addr_ip, socket_fd,index);
+            pthread_mutex_unlock(&mutex_for_connected_peers);
             free_announceData(&aData);
             print_tracker_files(tracker);
             print_tracker_peers(tracker);
@@ -108,11 +116,15 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     int index = 0;
     int n = 0;
     for (; n < MAX_PEERS; ++n) {
+        pthread_mutex_lock(&mutex_for_client_socket);
         if (client_socket[n] == client_sockfd) {
             index = n;
             break;
         }
-
+        pthread_mutex_unlock(&mutex_for_client_socket);
+    }
+    if( n < MAX_PEERS) {
+        pthread_mutex_unlock(&mutex_for_client_socket);
     }
     if (n == MAX_PEERS) {
         printf("Client not found (fd:%d).\n", client_sockfd);
@@ -142,14 +154,19 @@ void handle_client_connection(void *newsockfd_void_ptr) {
             // Le client a fermé la connexion
             printf("(%d) [\033[0;33m%s:%d\033[39m] Client disconnected (\033[0;33m%s:%d\033[39m).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
             write_log("(%d) [%s:%d] Client disconnected (%s:%d).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
+
+            pthread_mutex_lock(&mutex_for_client_socket);
             if (client_socket[index] == client_sockfd) {
+                pthread_mutex_lock(&mutex_for_connected_peers);
                 remove_peer_all_files(&tracker, connected_peers[index]);
                 client_socket[index] = 0;
                 bad_attempts[index] = 0;
                 ports[index] = 0;
                 connected_peers[index] = NULL;
+                pthread_mutex_unlock(&mutex_for_connected_peers);
                 close(client_sockfd);
             }
+            pthread_mutex_unlock(&mutex_for_client_socket);
             return;
         }
         if (buffer[n - 1] == '\n' || !strcmp(&buffer[n - 2], "\r\n"))
@@ -160,15 +177,18 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     if (strcmp(buffer, "exit") == 0) {
         printf("[\033[0;33m%s:%d\033[39m] Client requested to disconnect.\n", clientip, port);
         write_log("[%s:%d] Client requested to disconnect.\n", clientip, port);
-
+        pthread_mutex_lock(&mutex_for_client_socket);
         if (client_socket[index] == client_sockfd) {
             remove_peer_all_files(&tracker, connected_peers[index]);
             client_socket[index] = 0;
             bad_attempts[index] = 0;
             ports[index] = 0;
+            pthread_mutex_lock(&mutex_for_connected_peers);
             connected_peers[index] = NULL;
+            pthread_mutex_unlock(&mutex_for_connected_peers);
             close(client_sockfd);
         }
+        pthread_mutex_unlock(&mutex_for_client_socket);
         return;
     }
 
@@ -176,6 +196,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
     write_log("[%s:%d]: %s\n", clientip, port, buffer);
     // Vérifie si le message est bien formaté
     int check = handle_message(buffer, &tracker, clientip, client_sockfd, index); // Replace NULL by addr_ip
+    pthread_mutex_lock(&mutex_for_bad_attempts);
     if (check == 1) { // Message mal formaté
         ++bad_attempts[index];
         write_log("[%s:%d] Invalid message.\n", clientip, port);
@@ -183,7 +204,9 @@ void handle_client_connection(void *newsockfd_void_ptr) {
             printf("\033[0;31mMessage mal formaté détecté 3 fois, fermeture de la connexion avec \033[0;33m%s:%d\033[39m.\033[39m\n",
                    clientip, port);
             write_log("[%s:%d] Closing connection after to 3 consecutive errors.\n", clientip, port);
+            pthread_mutex_lock(&mutex_for_client_socket);
             client_socket[index] = 0;
+            pthread_mutex_unlock(&mutex_for_client_socket);
             close(client_sockfd);
             return;
         }
@@ -191,9 +214,15 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         // Message bien formaté, réinitialiser le compteur d'erreurs
         bad_attempts[index] = 0;
     }
+    pthread_mutex_unlock(&mutex_for_bad_attempts);
 }
 
 int main() {
+
+    pthread_mutex_init(&mutex_for_client_socket, NULL);
+    pthread_mutex_init(&mutex_for_connected_peers,NULL);
+    pthread_mutex_init(&mutex_for_bad_attempts,NULL);
+
     log_file = open_log();
     config conf = read_config();
     int opt = TRUE;
@@ -302,5 +331,8 @@ int main() {
         }
         thpool_wait(thpool);
     }
+    pthread_mutex_destroy(&mutex_for_client_socket);
+    pthread_mutex_destroy(&mutex_for_connected_peers);
+    pthread_mutex_destroy(&mutex_for_bad_attempts);
     return 0;
 }

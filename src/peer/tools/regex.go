@@ -112,7 +112,12 @@ var PeersRegex = PeersRegexGen()
 // ListCheck checks the format of a `list` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func ListCheck(message string) (bool, ListData) {
 	if match := ListRegex().FindStringSubmatch(message); match != nil {
-		filesData := strings.Split(match[1], " ")
+		var filesData []string
+		if match[1] == "" {
+			filesData = []string{}
+		} else {
+			filesData = strings.Split(match[1], " ")
+		}
 		if len(filesData)%4 != 0 {
 			fmt.Println("Invalid received message.")
 			return false, ListData{}

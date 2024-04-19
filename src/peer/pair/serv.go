@@ -1,6 +1,7 @@
 package peer_package
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -254,15 +255,28 @@ func (p *Peer) startListening() {
 					if (events[ev].Events&unix.EPOLLHUP) != 0 || (events[ev].Events&unix.EPOLLERR) != 0 {
 						return
 					} else if (events[ev].Events & unix.EPOLLIN) != 0 {
-						data := make([]byte, 32768)
-						_, err := conn.Read(data)
-						if err != nil {
-							fmt.Println("Read error:", err)
-							return
-						}
+						data := make([]byte, 0, 32768)
+						buf := make([]byte, 32768)
+						for {
+							n, err := conn.Read(buf)
+							errorCheck(err)
+							data = append(data, buf[:n]...)
 
+							if bytes.Contains(data, []byte{'\n'}) {
+								break
+							}
+						}
 						jobs <- Job{conn, data}
 					}
+					// 	data := make([]byte, 32768)
+					// 	_, err := conn.Read(data)
+					// 	if err != nil {
+					// 		fmt.Println("Read error:", err)
+					// 		return
+					// 	}
+					//
+					// 	jobs <- Job{conn, data}
+					// }
 				}
 			}
 		}()

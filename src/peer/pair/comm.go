@@ -16,6 +16,7 @@ import (
 )
 
 func (p *Peer) HelloTrack(t Peer) {
+	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
 	message := "announce listen " + p.Port + " seed ["
 	for _, valeur := range p.Files {
 		name, size, pieceSize, key, isEmpty := valeur.GetFile()
@@ -33,8 +34,12 @@ func (p *Peer) HelloTrack(t Peer) {
 	message = string(message)
 	_, err = conn.Write([]byte(message))
 	errorCheck(err)
-	buffer := make([]byte, 32768)
+	buffer := make([]byte, 1024)
+	err = conn.SetReadDeadline(time.Now().Add(time.Duration(float64(timeout) * math.Pow(10, 9))))
+	errorCheck(err)
 	n, err := conn.Read(buffer)
+	errorCheck(err)
+	err = conn.SetReadDeadline(time.Time{})
 	errorCheck(err)
 	fmt.Print("< ", string(buffer[:n]))
 	p.Comm[conn.RemoteAddr().String()] = conn
@@ -43,6 +48,7 @@ func (p *Peer) HelloTrack(t Peer) {
 func (p *Peer) sendupdate(t Peer) {
 	var seed string
 	var leech string
+	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
 	for {
 		seed = ""
 		leech = ""
@@ -75,6 +81,14 @@ func (p *Peer) sendupdate(t Peer) {
 		errorCheck(err)
 		_, err = conn.Write([]byte(message))
 		errorCheck(err)
+		buffer := make([]byte, 1024)
+		err = conn.SetReadDeadline(time.Now().Add(time.Duration(float64(timeout) * math.Pow(10, 9))))
+		errorCheck(err)
+		n, err := conn.Read(buffer)
+		errorCheck(err)
+		err = conn.SetReadDeadline(time.Time{})
+		errorCheck(err)
+		fmt.Print("< ", string(buffer[:n]))
 	}
 }
 
@@ -98,10 +112,17 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	conn.Write([]byte(message))
 
 	buffer := make([]byte, 32768)
-	fd, nerr := conn.Read(buffer)
-	errorCheck(nerr)
-	if fd > 0 {
-		mess := string(buffer[:fd])
+	var eom string
+	var n int
+	for len(eom) == 0 || eom[len(eom)-1] != '\n' {
+		fd, nerr := conn.Read(buffer)
+		n += fd
+		errorCheck(nerr)
+		eom += string(buffer[:fd])
+	}
+	if n > 0 {
+		mess := eom
+		// mess := string(buffer[:fd])
 		mess = strings.TrimSuffix(mess, "\n")
 		input := strings.Split(mess, " ")[0]
 		switch input {

@@ -1,9 +1,9 @@
 package peer_package
 
 import (
-	"bytes"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -23,7 +24,7 @@ func (p *Peer) Close(t string) {
 
 type Job struct {
 	conn net.Conn
-	data []byte
+	data string
 }
 
 var attempts = struct {
@@ -45,19 +46,19 @@ func worker(jobs chan Job, p *Peer) {
 			continue
 		}
 
-		mess := string(data[:])
+		mess := data
 		mess = strings.Split(mess, "\n")[0]
 		input := strings.Split(mess, " ")[0]
 
 		switch input {
 		case "interested":
 			valid, data := tools.InterestedCheck(mess)
-			fmt.Println(valid)
+			// fmt.Println(valid)
 			if valid {
 				// fmt.Println("in if")
 				file := p.Files[data.Key]
 				buff := "have " + data.Key + " " + tools.BufferMapToString(*file.Peers["self"].BufferMaps[data.Key]) + "\n"
-				fmt.Print(conn.LocalAddr(), buff)
+				fmt.Println(conn.LocalAddr(), buff)
 				_, err := conn.Write([]byte(buff))
 				errorCheck(err)
 				break
@@ -66,15 +67,15 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				if attempt == 0 {
-					buffer := "Invalid command you have no tries remaining, connection is closed..."
-					fmt.Println(conn.LocalAddr(), buffer)
+				if attempt <= 0 {
+					buffer := "Invalid command you have no tries remaining, connection is closed...\n"
+					fmt.Println(conn.LocalAddr(), buffer, mess, "interested")
 					_, err := conn.Write([]byte(buffer))
 					conn.Close()
 					errorCheck(err)
 
 				} else {
-					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
+					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
 					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					errorCheck(err)
@@ -100,7 +101,7 @@ func worker(jobs chan Job, p *Peer) {
 					// response += strconv.Itoa(piece) + ":" + string(tempBuff) + " "
 				}
 				response = strings.TrimSuffix(response, " ")
-				response += "]"
+				response += "]\n"
 				fmt.Println(conn.LocalAddr().String(), ":", response)
 				_, err = conn.Write([]byte(response))
 				errorCheck(err)
@@ -110,15 +111,15 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				if attempt == 0 {
-					buffer := "Invalid command you have no tries remaining, connection is closed..."
-					fmt.Println(conn.LocalAddr(), buffer)
+				if attempt <= 0 {
+					buffer := "Invalid command you have no tries remaining, connection is closed...\n"
+					fmt.Println(conn.LocalAddr(), buffer, mess, "getpieces")
 					_, err := conn.Write([]byte(buffer))
 					conn.Close()
 					errorCheck(err)
 
 				} else {
-					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
+					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
 					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					errorCheck(err)
@@ -129,7 +130,7 @@ func worker(jobs chan Job, p *Peer) {
 		case "have", "have\n":
 			valid, data := tools.HaveCheck(mess)
 			if valid {
-				response := "have " + data.Key + " " + tools.BufferMapToString(*p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key])
+				response := "have " + data.Key + " " + tools.BufferMapToString(*p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key]) + "\n"
 				_, err := conn.Write([]byte(response))
 				errorCheck(err)
 			} else {
@@ -137,15 +138,15 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				if attempt == 0 {
-					buffer := "Invalid command you have no tries remaining, connection is closed..."
-					fmt.Println(conn.LocalAddr(), buffer)
+				if attempt <= 0 {
+					buffer := "Invalid command you have no tries remaining, connection is closed...\n"
+					fmt.Println(conn.LocalAddr(), buffer, mess, "have")
 					_, err := conn.Write([]byte(buffer))
 					conn.Close()
 					errorCheck(err)
 
 				} else {
-					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
+					buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
 					fmt.Println(conn.LocalAddr(), buffer)
 					_, err := conn.Write([]byte(buffer))
 					errorCheck(err)
@@ -159,15 +160,16 @@ func worker(jobs chan Job, p *Peer) {
 			attempts.m[conn]--
 			attempt--
 			attempts.Unlock()
-			if attempt == 0 {
-				buffer := "Invalid command you have no tries remaining, connection is closed..."
-				fmt.Println(conn.LocalAddr(), buffer)
+			if attempt <= 0 {
+				buffer := "Invalid command you have no tries remaining, connection is closed...\n"
+				fmt.Println(conn.LocalAddr(), buffer, mess)
 				_, err := conn.Write([]byte(buffer))
 				conn.Close()
 				errorCheck(err)
+				os.Exit(1)
 
 			} else {
-				buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining"
+				buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
 				fmt.Println(conn.LocalAddr(), buffer)
 				_, err := conn.Write([]byte(buffer))
 				errorCheck(err)
@@ -255,17 +257,19 @@ func (p *Peer) startListening() {
 					if (events[ev].Events&unix.EPOLLHUP) != 0 || (events[ev].Events&unix.EPOLLERR) != 0 {
 						return
 					} else if (events[ev].Events & unix.EPOLLIN) != 0 {
-						data := make([]byte, 0, 32768)
+						var data string
 						buf := make([]byte, 32768)
-						for {
-							n, err := conn.Read(buf)
-							errorCheck(err)
-							data = append(data, buf[:n]...)
-
-							if bytes.Contains(data, []byte{'\n'}) {
-								break
-							}
+						conn.SetReadDeadline(time.Now().Add(time.Duration(float64(7) * math.Pow(10, 9))))
+						var err error = nil
+						var n int
+						for len(data) == 0 || data[len(data)-1] != '\n' || err != nil {
+							fd, err = conn.Read(buf)
+							n += fd
+							// errorCheck(nerr)
+							data += string(buf[:fd])
 						}
+						conn.SetReadDeadline(time.Time{})
+						fmt.Println(string(data))
 						jobs <- Job{conn, data}
 					}
 					// 	data := make([]byte, 32768)

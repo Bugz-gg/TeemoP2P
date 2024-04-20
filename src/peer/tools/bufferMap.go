@@ -26,6 +26,20 @@ func InitBufferMap(size int, pieceSize int) BufferMap {
 	return BufferMap{Length: BitSize(size, pieceSize), BitSequence: make([]byte, (size-1)/pieceSize/8+1)}
 }
 
+func LenInitBufferMap(length int) BufferMap {
+	return BufferMap{Length: length, BitSequence: make([]byte, (length-1)/8+1)}
+}
+
+func BitCount(buff BufferMap) int {
+	var count int = 0
+	for i := range buff.Length {
+		if ByteArrayCheck(buff.BitSequence, i) {
+			count++
+		}
+	}
+	return count
+}
+
 // ByteArrayWrite sets the bit at `index` position to 1.
 func ByteArrayWrite(array *[]byte, index int) {
 	(*array)[index/8] |= 1 << (7 - (index % 8))
@@ -52,13 +66,17 @@ func BufferMapErase(bufferMap *BufferMap, index int) {
 }
 
 // BufferMapCopy copies a BufferMap into another.
-func BufferMapCopy(dst *BufferMap, src *BufferMap) {
+// BufferMapCopy copies a BufferMap into another.
+func BufferMapCopy(dst **BufferMap, src *BufferMap) {
+	if *dst == nil {
+		*dst = &BufferMap{Length: src.Length, BitSequence: make([]byte, (src.Length-1)/8+1)}
+	}
 	//for i := range dst.Length { // TODO
-	for i := 0; i < dst.Length; i++ {
+	for i := 0; i < (*dst).Length; i++ {
 		if ByteArrayCheck(src.BitSequence, i) {
-			ByteArrayWrite(&dst.BitSequence, i)
+			ByteArrayWrite(&((*dst).BitSequence), i)
 		} else {
-			ByteArrayErase(&dst.BitSequence, i)
+			ByteArrayErase(&((*dst).BitSequence), i)
 		}
 	}
 }

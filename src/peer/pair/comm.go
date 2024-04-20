@@ -15,6 +15,8 @@ import (
 	// "peerproject/tools"
 )
 
+var previousMessage string // To know if it was an interested or a have.<ScrollWheelDown>
+
 func (p *Peer) HelloTrack(t Peer) {
 	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
 	message := "announce listen " + p.Port + " seed ["
@@ -40,8 +42,9 @@ func (p *Peer) HelloTrack(t Peer) {
 	n, err := conn.Read(buffer)
 	errorCheck(err)
 	err = conn.SetReadDeadline(time.Time{})
-	errorCheck(err)
-	fmt.Print("< ", string(buffer[:n]))
+	if err == nil {
+		fmt.Print("< ", string(buffer[:n]))
+	}
 	p.Comm[conn.RemoteAddr().String()] = conn
 }
 
@@ -83,12 +86,11 @@ func (p *Peer) sendupdate(t Peer) {
 		errorCheck(err)
 		buffer := make([]byte, 1024)
 		err = conn.SetReadDeadline(time.Now().Add(time.Duration(float64(timeout) * math.Pow(10, 9))))
-		errorCheck(err)
 		n, err := conn.Read(buffer)
-		errorCheck(err)
 		err = conn.SetReadDeadline(time.Time{})
-		errorCheck(err)
-		fmt.Print("< ", string(buffer[:n]))
+		if err == nil {
+			fmt.Print("< ", string(buffer[:n]))
+		}
 	}
 }
 
@@ -114,12 +116,16 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	buffer := make([]byte, 32768)
 	var eom string
 	var n int
-	for len(eom) == 0 || eom[len(eom)-1] != '\n' {
-		fd, nerr := conn.Read(buffer)
+	var nerr error = nil
+	var fd int
+	conn.SetReadDeadline(time.Now().Add(time.Duration(float64(7) * math.Pow(10, 9))))
+	for len(eom) == 0 || eom[len(eom)-1] != '\n' || nerr != nil {
+		fd, nerr = conn.Read(buffer)
 		n += fd
-		errorCheck(nerr)
+		// errorCheck(nerr)
 		eom += string(buffer[:fd])
 	}
+	conn.SetReadDeadline(time.Time{})
 	if n > 0 {
 		mess := eom
 		// mess := string(buffer[:fd])
@@ -131,18 +137,11 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			valid, data := tools.DataCheck(mess)
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ":", mess)
-				// fmt.Println("ET OUAIS .....")
 				os.MkdirAll(filepath.Join("./", tools.GetValueFromConfig("Peer", "path"), "/", "tabernak"), os.FileMode(0777))
 				file := p.Files[data.Key]
-				// if !ok {
-				// 	rFile := tools.RemoteFiles[data.Key]
-				// 	p.Files[data.Key] = &tools.File{Name: rFile.Name, Size: rFile.Size, PieceSize: rFile.PieceSize, Key: data.Key}
-				// 	tools.InitBufferMap(p.Files[data.Key])
-				// 	file = p.Files[data.Key]
-				// }
-				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "tabernak/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
+				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
 				errorCheck(err)
-				fdc, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "tabernak/log"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
+				fdc, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/log"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
 				errorCheck(err)
 				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)
@@ -157,6 +156,17 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					tools.ByteArrayWrite(&file.Peers[conn.LocalAddr().String()].BufferMaps[data.Key].BitSequence, data.Pieces[i].Index)
 
 				}
+				if hash := tools.GetMD5Hash(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/file")); hash == data.Key {
+					err := os.Remove(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/log"))
+					errorCheck(err)
+
+					err = os.Rename(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/file"), filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"2"))
+					errorCheck(err)
+
+					err = os.RemoveAll(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name))
+					errorCheck(err)
+				}
+
 				fdf.Close()
 				fdc.Close()
 			} else {
@@ -166,9 +176,43 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			valid, data := tools.HaveCheck(mess)
 
 			if valid {
-				tools.BufferMapCopy(&data.BufferMap, tools.RemoteFiles[data.Key].Peers[conn.RemoteAddr().String()].BufferMaps[data.Key]) // TODO Debug
+				peer := tools.RemoteFiles[data.Key].Peers[conn.RemoteAddr().String()]
+				bufferMap := peer.BufferMaps[data.Key]
+				tools.BufferMapCopy(&bufferMap, &data.BufferMap)
 
-				go p.progression(data.Key, p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key].Length, conn)
+				if _, valid := p.Files[data.Key]; !valid {
+					fil := tools.File{
+						Name:      tools.RemoteFiles[data.Key].Name,
+						Size:      tools.RemoteFiles[data.Key].Size,
+						PieceSize: tools.RemoteFiles[data.Key].PieceSize,
+						Key:       data.Key,
+					}
+
+					bufferMaps := make(map[string]*tools.BufferMap)
+					buffermap := tools.InitBufferMap(tools.RemoteFiles[data.Key].Size, tools.RemoteFiles[data.Key].PieceSize)
+					fmt.Println(buffermap)
+					bufferMaps[data.Key] = &buffermap
+					//InitBufferMap(&fil)
+					if fil.Peers == nil {
+						fil.Peers = make(map[string]*tools.Peer)
+					}
+					fil.Peers["self"] = &tools.Peer{
+						IP:         p.IP,
+						Port:       p.Port,
+						BufferMaps: bufferMaps,
+					}
+					if _, valid := fil.Peers["self"].BufferMaps[data.Key]; !valid {
+						*p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key] = tools.InitBufferMap(tools.RemoteFiles[data.Key].Size, tools.RemoteFiles[data.Key].PieceSize)
+					}
+					fil.Peers[conn.LocalAddr().String()] = fil.Peers["self"]
+					p.Files[data.Key] = &fil
+				}
+				if previousMessage == "interested" {
+					go p.progression(data.Key, conn)
+				} else {
+					time.Sleep(2) // Handle new pieces.
+				}
+
 				fmt.Println(conn.RemoteAddr(), ":", mess)
 			} else {
 				fmt.Println("\u001B[92mInvalid have response...\u001B[39m")
@@ -187,6 +231,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ":", mess)
 				key := strings.Split(mess, " ")[1]
+				previousMessage = "interested"
 				p.interested(key)
 			} else {
 				fmt.Println("\u001B[92mInvalid peers response...\u001B[39m")
@@ -205,7 +250,8 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 func (p *Peer) interested(key string) {
 	temp := tools.RemoteFiles[key]
 	l := len(temp.Peers)
-	for max, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_peers_to_connect")); max != 0; max-- {
+	it := l
+	for max, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_peers_to_connect")); max != 0 && it > 0; max-- {
 		//random := rand.Intn(l)
 		var randomPeer tools.Peer
 		k := rand.Intn(l)
@@ -215,17 +261,19 @@ func (p *Peer) interested(key string) {
 			}
 			k--
 		}
-		p.ConnectTo(randomPeer.IP, fmt.Sprint(randomPeer.Port), "interested"+" "+key)
+		p.ConnectTo(randomPeer.IP, fmt.Sprint(randomPeer.Port), "interested "+key+"\n")
+		it--
 	}
 }
 
-func (p *Peer) progression(key string, length int, conn net.Conn) {
+func (p *Peer) progression(key string, conn net.Conn) {
 	i, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "progress_value"))
 	for {
+		previousMessage = "have"
 		if file, valid := p.Files["self"]; valid {
-			if file.Peers[conn.LocalAddr().String()].BufferMaps[key].Length == length+i {
-				WriteReadConnection(conn, p, "have "+key+" "+tools.BufferMapToString(*file.Peers[conn.LocalAddr().String()].BufferMaps[key]))
-				i = 0
+			length := tools.BitCount(*file.Peers[conn.LocalAddr().String()].BufferMaps[key])
+			if length >= i && length%i == 0 {
+				WriteReadConnection(conn, p, "have "+key+" "+tools.BufferMapToString(*file.Peers[conn.LocalAddr().String()].BufferMaps[key])+"\n")
 			}
 		}
 	}
@@ -234,8 +282,10 @@ func (p *Peer) ConnectTo(IP string, Port string, mess ...string) {
 	conn, err := net.Dial("tcp", IP+":"+Port)
 	errorCheck(err)
 	// defer conn.Close()
-	p.Comm[conn.RemoteAddr().String()] = conn
-	fmt.Println(conn.LocalAddr(), " is connected to ", conn.RemoteAddr())
+	if _, valid := p.Comm[conn.RemoteAddr().String()]; !valid {
+		p.Comm[conn.RemoteAddr().String()] = conn
+		fmt.Println(conn.LocalAddr(), " is connected to ", conn.RemoteAddr())
+	}
 	if len(mess) == 0 {
 		WriteReadConnection(conn, p)
 	} else {

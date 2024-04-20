@@ -59,8 +59,6 @@ func StartPeer(IP string, Port string, Type string) Peer {
 	peer.Files = tools.FillFilesFromConfig(IP + ":" + Port)
 	fmt.Println(peer.Files)
 	tools.LocalFiles = &peer.Files
-	// tools.RemoteFiles = peer.Files
-	// fmt.Println(peer.Files, peer.Files["971158fe5b6f5cd9bff3d3ac747ccae7"], tools.RemoteFiles)
 	go peer.startListening()
 	time.Sleep(time.Second)
 	go peer.sendupdate(track)

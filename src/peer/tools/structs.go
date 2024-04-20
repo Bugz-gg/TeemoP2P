@@ -60,7 +60,7 @@ type PeersData struct {
 // Peer is a struct used by PeersData.
 type Peer struct {
 	IP         string
-	Port       int
+	Port       string
 	BufferMaps map[string]*BufferMap
 }
 

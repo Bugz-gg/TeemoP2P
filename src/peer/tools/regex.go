@@ -276,8 +276,8 @@ func PeersCheck(message string) bool {
 		// Check if peer already registered
 		for _, data := range peersdata {
 			info := strings.Split(data, ":")
-			port, _ := strconv.Atoi(info[1])
-			peerId := fmt.Sprintf("%s:%d", info[0], port)
+			port := info[1]
+			peerId := fmt.Sprintf("%s:%s", info[0], port)
 			if _, valid := AllPeers[peerId]; !valid { // If it is the first time learning about a peer.
 				AllPeers[peerId] = &Peer{IP: info[0], Port: port}
 			}

@@ -259,10 +259,10 @@ func (p *Peer) startListening() {
 					} else if (events[ev].Events & unix.EPOLLIN) != 0 {
 						var data string
 						buf := make([]byte, 32768)
-						conn.SetReadDeadline(time.Now().Add(time.Duration(float64(7) * math.Pow(10, 9))))
 						var err error = nil
 						var n int
 						for len(data) == 0 || data[len(data)-1] != '\n' || err != nil {
+							conn.SetReadDeadline(time.Now().Add(time.Duration(float64(7) * math.Pow(10, 9))))
 							fd, err = conn.Read(buf)
 							n += fd
 							// errorCheck(nerr)

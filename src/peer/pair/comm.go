@@ -43,7 +43,7 @@ func (p *Peer) HelloTrack(t Peer) {
 	errorCheck(err)
 	err = conn.SetReadDeadline(time.Time{})
 	if err == nil {
-		fmt.Print("< ", string(buffer[:n]))
+		fmt.Print(string(buffer[:n]))
 	}
 	p.Comm[conn.RemoteAddr().String()] = conn
 }
@@ -89,7 +89,7 @@ func (p *Peer) sendupdate(t Peer) {
 		n, err := conn.Read(buffer)
 		err = conn.SetReadDeadline(time.Time{})
 		if err == nil {
-			fmt.Print("< ", string(buffer[:n]))
+			fmt.Print(string(buffer[:n]))
 		}
 	}
 }
@@ -118,8 +118,8 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	var n int
 	var nerr error = nil
 	var fd int
-	conn.SetReadDeadline(time.Now().Add(time.Duration(float64(7) * math.Pow(10, 9))))
 	for len(eom) == 0 || eom[len(eom)-1] != '\n' || nerr != nil {
+		conn.SetReadDeadline(time.Now().Add(time.Duration(float64(7) * math.Pow(10, 9))))
 		fd, nerr = conn.Read(buffer)
 		n += fd
 		// errorCheck(nerr)
@@ -137,11 +137,11 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			valid, data := tools.DataCheck(mess)
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ":", mess)
-				os.MkdirAll(filepath.Join("./", tools.GetValueFromConfig("Peer", "path"), "/", "tabernak"), os.FileMode(0777))
+				os.MkdirAll(filepath.Join("./", tools.GetValueFromConfig("Peer", "path"), "/", p.Files[data.Key].Name), os.FileMode(0777))
 				file := p.Files[data.Key]
 				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
 				errorCheck(err)
-				fdc, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/log"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
+				fdc, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/manifest"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
 				errorCheck(err)
 				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)

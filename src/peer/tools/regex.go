@@ -224,8 +224,8 @@ func DataCheck(message string) (bool, DataData) {
 
 		file := (*LocalFiles)[match[1]]
 		piecesize := file.PieceSize
-		pieces := make([]Piece, len(piecesdata))
-		for i, data := range piecesdata {
+		var pieces []Piece
+		for _, data := range piecesdata {
 			piece := strings.Split(data, ":")
 			index, _ := strconv.Atoi(piece[0])
 			if index < 0 || index >= BufferBitSize(*file) { //file.BufferMapLength {
@@ -242,9 +242,7 @@ func DataCheck(message string) (bool, DataData) {
 				fmt.Println("Wrong piece size received.")
 				return false, DataData{}
 			}
-			pieces[i].Index = index
-			pieces[i].Data = StringToData(piece[1])
-
+			pieces = append(pieces, Piece{Index: index, Data: StringToData(piece[1])})
 			// Check integrity of file if all pieces have been downloaded ?
 
 		}

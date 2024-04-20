@@ -31,7 +31,7 @@ func searchFiles(path string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
+		if !info.IsDir() && info.Name() != "file" && info.Name() != "manifest" {
 			files = append(files, filePath)
 		}
 		return nil
@@ -61,6 +61,7 @@ func fillStruct(files []string, conn string) map[string]*File {
 				return nil
 			}
 		}
+		pieceSize = min(pieceSize, int(fileSize))
 
 		fil := File{
 			Name:      filepath.Base(filePath),

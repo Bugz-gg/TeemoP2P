@@ -21,16 +21,32 @@ func TestList(t *testing.T) {
 
 	success, listData := tools.ListCheck("list [f.e 12 1 Uizhsja8hzUizhsja8hzUizhsja8hzsu]")
 	expectedListData := tools.ListData{Files: []tools.File{{Name: "f.e", Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}}}
-	//tools.InitBufferMap(&(expectedListData.Files[0]))
 	if !success || !tools.ListDataCmp(listData, expectedListData) {
 		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData, success, listData)
 	}
 
 	success2, listData2 := tools.ListCheck("list [etoausk 22 2 df833476b1fbb8aa113c14d5a9421180]")
 	expectedListData2 := tools.ListData{Files: []tools.File{{Name: "etoausk", Size: 22, PieceSize: 2, Key: "df833476b1fbb8aa113c14d5a9421180"}}}
-	//tools.InitBufferMap(&(expectedListData2.Files[0]))
 	if !success || !tools.ListDataCmp(listData2, expectedListData2) {
 		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData2, success2, listData2)
+	}
+
+	success3, listData3 := tools.ListCheck("list [etoausk 22 2 df8334l6b1fbb8aa113c14d5a9421180]")
+	expectedListData3 := tools.ListData{Files: []tools.File{{Name: "etoausk(1)", Size: 22, PieceSize: 2, Key: "df8334l6b1fbb8aa113c14d5a9421180"}}}
+	if !success || !tools.ListDataCmp(listData3, expectedListData3) {
+		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData3, success3, listData3)
+	}
+
+	success4, listData4 := tools.ListCheck("list [f.e 12 1 Uizhsja8hzUizhsjm8hzUizhsja8hzsu]")
+	expectedListData4 := tools.ListData{Files: []tools.File{{Name: "f.e(1)", Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsjm8hzUizhsja8hzsu"}}}
+	if !success || !tools.ListDataCmp(listData4, expectedListData4) {
+		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData4, success4, listData4)
+	}
+
+	success5, listData5 := tools.ListCheck("list [etoausk 22 2 df8334l6b1fbn8aa113c14d5a9421180]")
+	expectedListData5 := tools.ListData{Files: []tools.File{{Name: "etoausk(2)", Size: 22, PieceSize: 2, Key: "df8334l6b1fbn8aa113c14d5a9421180"}}}
+	if !success || !tools.ListDataCmp(listData5, expectedListData5) {
+		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData5, success5, listData5)
 	}
 }
 
@@ -205,6 +221,7 @@ func TestPeers(t *testing.T) {
 	}
 
 	tools.RemoteFiles["Uizhsja8hzpolisja8hzUizhsja8hzsu"] = &tools.File{Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"}
+	tools.RemoteFiles["Uizhsja8hzpolisja8hzUizhsja8hzsu"].Peers = map[string]*tools.Peer{}
 	// Correct
 	success4 := tools.PeersCheck("peers Uizhsja8hzpolisja8hzUizhsja8hzsu [10.0.0.10:32 249.111.109.19:100]")
 	expectedPeersMap4 := make(map[string]map[string]*tools.Peer)

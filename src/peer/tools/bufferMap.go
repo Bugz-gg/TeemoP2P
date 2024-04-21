@@ -66,7 +66,6 @@ func BufferMapErase(bufferMap *BufferMap, index int) {
 }
 
 // BufferMapCopy copies a BufferMap into another.
-// BufferMapCopy copies a BufferMap into another.
 func BufferMapCopy(dst **BufferMap, src *BufferMap) {
 	if *dst == nil {
 		*dst = &BufferMap{Length: src.Length, BitSequence: make([]byte, (src.Length-1)/8+1)}

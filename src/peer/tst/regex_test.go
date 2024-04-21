@@ -202,8 +202,8 @@ func TestPeers(t *testing.T) {
 	tmpFiles := map[string]*tools.File{}
 	tools.LocalFiles = &tmpFiles
 
-	tools.AllPeers["10.0.0.10:32"] = &tools.Peer{IP: "10.0.0.10", Port: 32}
-	tools.AllPeers["249.111.109.19:100"] = &tools.Peer{IP: "249.111.109.19", Port: 100}
+	tools.AllPeers["10.0.0.10:32"] = &tools.Peer{IP: "10.0.0.10", Port: "32"}
+	tools.AllPeers["249.111.109.19:100"] = &tools.Peer{IP: "249.111.109.19", Port: "100"}
 
 	tools.RemoteFiles["UizhsjakhzUizhsja8hzUizhsja8hzsu"] = &tools.File{Key: "UizhsjakhzUizhsja8hzUizhsja8hzsu"}
 	// No peer given
@@ -225,7 +225,7 @@ func TestPeers(t *testing.T) {
 	// Correct
 	success4 := tools.PeersCheck("peers Uizhsja8hzpolisja8hzUizhsja8hzsu [10.0.0.10:32 249.111.109.19:100]")
 	expectedPeersMap4 := make(map[string]map[string]*tools.Peer)
-	expectedPeersMap4["Uizhsja8hzpolisja8hzUizhsja8hzsu"] = map[string]*tools.Peer{"10.0.0.10:32": {IP: "10.0.0.10", Port: 32}, "249.111.109.19:100": {IP: "249.111.109.19", Port: 100}}
+	expectedPeersMap4["Uizhsja8hzpolisja8hzUizhsja8hzsu"] = map[string]*tools.Peer{"10.0.0.10:32": {IP: "10.0.0.10", Port: "32"}, "249.111.109.19:100": {IP: "249.111.109.19", Port: "100"}}
 	//expectedPeersData4 := tools.PeersData{Key: "Uizhsja8hzpolisja8hzUizhsja8hzsu", Peers: []tools.Peer{{IP: "10.0.0.10", Port: 32}, {IP: "249.111.109.19", Port: 100}}}
 	if !success4 || !tools.MapPeersCmp(tools.RemoteFiles["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].Peers, expectedPeersMap4["Uizhsja8hzpolisja8hzUizhsja8hzsu"]) {
 		t.Errorf("PeersCheck failed. Expected: true (%v), Got: %v (%v)", expectedPeersMap4, success4, (*tools.LocalFiles)["Uizhsja8hzUizhsja8hzUizhsja8hzsu"].Peers)

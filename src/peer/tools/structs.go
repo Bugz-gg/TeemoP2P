@@ -73,7 +73,7 @@ type BufferMap struct {
 
 // FileCmp tells if two File are equal.
 func FileCmp(f1 File, f2 File) bool {
-	return f1.Key == f2.Key // && f1.Name == f2.Name && (f1.Size == f2.Size) && (f1.PieceSize == f2.PieceSize) && (&f1.Peers == &f2.Peers) //BufferMapCmp(f1.BufferMap, f2.BufferMap)
+	return f1.Key == f2.Key && f1.Name == f2.Name && (f1.Size == f2.Size) && (f1.PieceSize == f2.PieceSize) // && (&f1.Peers == &f2.Peers) //BufferMapCmp(f1.BufferMap, f2.BufferMap)
 }
 
 // ListDataCmp tells if two ListData are equal.

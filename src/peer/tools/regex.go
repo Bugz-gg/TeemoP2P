@@ -124,6 +124,21 @@ func ListCheck(message string) (bool, ListData) {
 		nbFiles := len(filesData) / 4
 		for i := 0; i < nbFiles; i++ {
 			filename := filesData[i*4]
+			dupCount := 0
+			for {
+				index := 0
+				for _, file := range RemoteFiles {
+					if file.Name == filename {
+						break
+					}
+					index++
+				}
+				if index >= len(RemoteFiles) {
+					break
+				}
+				dupCount++
+				filename = strings.TrimSuffix(filename, "("+strconv.Itoa(dupCount-1)+")") + "(" + strconv.Itoa(dupCount) + ")"
+			}
 			size, err := strconv.Atoi(filesData[i*4+1])
 			pieceSize, err2 := strconv.Atoi(filesData[i*4+2])
 

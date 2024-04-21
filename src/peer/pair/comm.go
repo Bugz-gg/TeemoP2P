@@ -146,7 +146,13 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)
 					errorCheck(err)
-					n, err := fdf.Write(data.Pieces[i].Data.BitSequence)
+					var n int
+					if data.Pieces[i].Index+1 == tools.BufferBitSize(*file) {
+						n, _ = fdf.Write(data.Pieces[i].Data.BitSequence[:file.Size%file.PieceSize])
+
+					} else {
+						n, _ = fdf.Write(data.Pieces[i].Data.BitSequence)
+					}
 					if n <= 0 {
 						fmt.Println("File as not being written. :(", err, data.Pieces[i].Data.BitSequence)
 
@@ -157,10 +163,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 
 				}
 				if hash := tools.GetMD5Hash(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/file")); hash == data.Key {
-					err := os.Remove(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/log"))
-					errorCheck(err)
-
-					err = os.Rename(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/file"), filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"2"))
+					err = os.Rename(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name+"/file"), filepath.Join(tools.GetValueFromConfig("Peer", "path"), "2"+p.Files[data.Key].Name))
 					errorCheck(err)
 
 					err = os.RemoveAll(filepath.Join(tools.GetValueFromConfig("Peer", "path"), p.Files[data.Key].Name))
@@ -190,7 +193,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 
 					bufferMaps := make(map[string]*tools.BufferMap)
 					buffermap := tools.InitBufferMap(tools.RemoteFiles[data.Key].Size, tools.RemoteFiles[data.Key].PieceSize)
-					fmt.Println(buffermap)
+					// fmt.Println(buffermap)
 					bufferMaps[data.Key] = &buffermap
 					//InitBufferMap(&fil)
 					if fil.Peers == nil {

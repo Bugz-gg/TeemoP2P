@@ -264,6 +264,8 @@ func main() {
 			fmt.Println("Received :", s, ". Please exit the code proprely by typing exit :)")
 		}
 	}()
+	tools.LogFile, _ = tools.OpenLog()
+	tools.WriteLog("Lancement du peer...")
 	inputProg()
 	select {}
 }

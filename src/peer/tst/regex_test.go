@@ -48,6 +48,12 @@ func TestList(t *testing.T) {
 	if !success || !tools.ListDataCmp(listData5, expectedListData5) {
 		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData5, success5, listData5)
 	}
+
+	success6, listData6 := tools.ListCheck("list [etoausk 22 2 df833476b1fbb8aa113c14d5a9421180]")
+	expectedListData6 := tools.ListData{Files: []tools.File{{Name: "etoausk", Size: 22, PieceSize: 2, Key: "df833476b1fbb8aa113c14d5a9421180"}}}
+	if !success || !tools.ListDataCmp(listData6, expectedListData6) {
+		t.Errorf("ListCheck failed. Expected: true %v, Got: %v %v", expectedListData6, success6, listData6)
+	}
 }
 
 func TestInterested(t *testing.T) {

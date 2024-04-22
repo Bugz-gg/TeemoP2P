@@ -254,6 +254,8 @@ func inputProg() {
 }
 
 func main() {
+	tools.LogFile, _ = tools.OpenLog()
+	tools.WriteLog("Lancement du peer...")
 	inputProg()
 
 	select {}

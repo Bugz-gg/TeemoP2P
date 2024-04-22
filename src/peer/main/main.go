@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	peer "peerproject/pair"
@@ -254,7 +256,14 @@ func inputProg() {
 }
 
 func main() {
+	sigchnl := make(chan os.Signal, 1)
+	signal.Notify(sigchnl, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		for {
+			s := <-sigchnl
+			fmt.Println("Received :", s, ". Please exit the code proprely by typing exit :)")
+		}
+	}()
 	inputProg()
-
 	select {}
 }

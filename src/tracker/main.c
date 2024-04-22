@@ -152,20 +152,20 @@ void handle_client_connection(void *newsockfd_void_ptr) {
         }
         if (n == 0) {
             // Le client a fermé la connexion
-            printf("(%d) [\033[0;33m%s:%d\033[39m] Client disconnected (\033[0;33m%s:%d\033[39m).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
-            write_log("(%d) [%s:%d] Client disconnected (%s:%d).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
-
+      
             pthread_mutex_lock(&mutex_for_client_socket);
             if (client_socket[index] == client_sockfd) {
-                pthread_mutex_lock(&mutex_for_connected_peers);
-                remove_peer_all_files(&tracker, connected_peers[index]);
-                client_socket[index] = 0;
-                bad_attempts[index] = 0;
-                ports[index] = 0;
-                connected_peers[index] = NULL;
-                pthread_mutex_unlock(&mutex_for_connected_peers);
-                close(client_sockfd);
-            }
+              printf("(%d) [\033[0;33m%s:%d\033[39m] Client disconnected (\033[0;33m%s:%d\033[39m).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
+              write_log("(%d) [%s:%d] Client disconnected (%s:%d).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
+              pthread_mutex_lock(&mutex_for_connected_peers);
+              remove_peer_all_files(&tracker, connected_peers[index]);
+              client_socket[index] = 0;
+              bad_attempts[index] = 0;
+              ports[index] = 0;
+              connected_peers[index] = NULL;
+              pthread_mutex_unlock(&mutex_for_connected_peers);
+              close(client_sockfd);
+          }
             pthread_mutex_unlock(&mutex_for_client_socket);
             return;
         }

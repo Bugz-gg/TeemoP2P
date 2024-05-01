@@ -55,6 +55,17 @@ func ByteArrayCheck(array []byte, index int) bool {
 	return array[index/8]&(1<<(7-index%8)) > 0
 }
 
+// ArrayCheck tells you if the array is full of 1 or not.
+// Usefull is you want to know if a file is entirely dl.
+func ArrayCheck(array []byte) bool {
+	for i := 0; i < len(array); i++ {
+		if !ByteArrayCheck(array, i) {
+			return false
+		}
+	}
+	return true
+}
+
 // BufferMapWrite uses ByteArrayWrite to write a 1 at the `index` position.
 func BufferMapWrite(bufferMap *BufferMap, index int) {
 	ByteArrayWrite(&(bufferMap.BitSequence), index)

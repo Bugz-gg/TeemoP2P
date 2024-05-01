@@ -6,7 +6,7 @@ type File struct {
 	Size      int
 	PieceSize int
 	Key       string
-	Peers     map[string]*Peer
+	Peers     map[string]*Peer // Conn.Addr
 } //BufferMap BufferMap
 
 // Piece contains the data about a piece (the actual data).

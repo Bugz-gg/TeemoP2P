@@ -46,7 +46,6 @@ func GetConfig() Peer {
 	return track
 }
 
-// TODO : Regarder si il faut pas utiliser la fonction de dl.go.
 func StartPeer(IP string, Port string, Type string) Peer {
 	track := GetConfig()
 	peer := Peer{
@@ -63,5 +62,6 @@ func StartPeer(IP string, Port string, Type string) Peer {
 	go peer.sendupdate(track)
 	time.Sleep(time.Millisecond)
 	peer.HelloTrack(track)
+	go peer.rarepiece()
 	return peer
 }

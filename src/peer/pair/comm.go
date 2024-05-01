@@ -11,11 +11,13 @@ import (
 	"peerproject/tools"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
-	// "peerproject/tools"
 )
 
+var mutex sync.Mutex
 var previousMessage string // To know if it was an interested or a have.<ScrollWheelDown>
+var rare bool
 
 func (p *Peer) HelloTrack(t Peer) {
 	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
@@ -46,6 +48,7 @@ func (p *Peer) HelloTrack(t Peer) {
 		fmt.Print(string(buffer[:n]))
 	}
 	p.Comm[conn.RemoteAddr().String()] = conn
+	p.Comm["tracker"] = p.Comm[conn.RemoteAddr().String()]
 }
 
 func (p *Peer) sendupdate(t Peer) {
@@ -92,6 +95,59 @@ func (p *Peer) sendupdate(t Peer) {
 			fmt.Print(string(buffer[:n]))
 		}
 	}
+}
+
+func (p *Peer) rarepiece() {
+	time.Sleep(time.Second)
+	conn := p.Comm["tracker"]
+	t, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "time_dl_rare_piece"))
+	var byteArray []int
+	var connArray map[int][]net.Conn
+	for {
+		WriteReadConnection(conn, p, "look []\n")
+		for key := range tools.RemoteFiles {
+			if !tools.ArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence) {
+				k := max(int(p.Files[key].PieceSize/4), 1)
+				rareArray := make([]int, k)
+				mutex.Lock()
+				rare = true
+				mutex.Unlock()
+				WriteReadConnection(conn, p, "getfile "+key+"\n")
+				for connRem := range tools.RemoteFiles[key].Peers {
+					p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
+					j := 0
+					if byteArray == nil {
+						byteArray = make([]int, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length) // TODO : Maybe not Lenght but BufferMaps func
+						connArray = make(map[int][]net.Conn, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length)
+					}
+					for i := range tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence {
+						if i == 1 {
+							connArray[j] = append(connArray[j], p.Comm[connRem])
+						}
+						byteArray[j] += int(i)
+						j++
+					}
+
+				}
+				for i := 0; i < k; i++ {
+					minIndex := i
+					for j := i + 1; j < len(byteArray); j++ {
+						if byteArray[j] < byteArray[minIndex] {
+							minIndex = j
+						}
+					}
+					byteArray[i], byteArray[minIndex] = byteArray[minIndex], byteArray[i]
+					rareArray[i] = minIndex
+				}
+				for index := range rareArray { // TODO : Can improve is in case its only one peer to send it only once
+					WriteReadConnection(connArray[index][rand.Intn(len(connArray[index]))], p, "getpieces "+string(index)+"\n")
+				}
+				continue
+			}
+		}
+		time.Sleep(time.Duration(math.Pow(10, 9) * float64(t)))
+	}
+
 }
 
 // TODO : Remote file stockage lors d une demande au tracker
@@ -234,8 +290,12 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			if valid {
 				fmt.Println(conn.RemoteAddr(), ":", mess)
 				key := strings.Split(mess, " ")[1]
+				mutex.Lock()
 				previousMessage = "interested"
-				p.interested(key)
+				mutex.Unlock()
+				if !rare {
+					p.interested(key)
+				}
 			} else {
 				fmt.Println("\u001B[92mInvalid peers response...\u001B[39m")
 			}
@@ -269,10 +329,42 @@ func (p *Peer) interested(key string) {
 	}
 }
 
+// TODO : Maybe keep the peer that as the rare piece.
+func rarepiece(key string) []int {
+	peers := tools.RemoteFiles[key]
+	k := max(int(peers.PieceSize/4), 1)
+	rare := make([]int, k)
+	var bitseq []int
+	for _, value := range peers.Peers {
+		j := 0
+		if bitseq == nil {
+			bitseq = make([]int, value.BufferMaps[key].Length) // TODO : Maybe not Lenght but BufferMaps func
+
+		}
+		for i := range value.BufferMaps[key].BitSequence {
+			bitseq[j] += int(i)
+			j++
+		}
+	}
+	for i := 0; i < k; i++ {
+		minIndex := i
+		for j := i + 1; j < len(bitseq); j++ {
+			if bitseq[j] < bitseq[minIndex] {
+				minIndex = j
+			}
+		}
+		bitseq[i], bitseq[minIndex] = bitseq[minIndex], bitseq[i]
+		rare[i] = minIndex
+	}
+	return rare
+}
+
 func (p *Peer) progression(key string, conn net.Conn) {
 	i, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "progress_value"))
 	for {
+		mutex.Lock()
 		previousMessage = "have"
+		mutex.Unlock()
 		if file, valid := p.Files["self"]; valid {
 			length := tools.BitCount(*file.Peers[conn.LocalAddr().String()].BufferMaps[key])
 			if length >= i && length%i == 0 {

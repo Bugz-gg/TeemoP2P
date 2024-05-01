@@ -7,7 +7,7 @@
 
 
 enum criterias {
-    FILENAME, FILESIZE
+    FILENAME, FILESIZE, KEY
 };
 enum operations {
     LT, LE, EQ, GE, GT, DI

@@ -486,6 +486,37 @@ void select_by_file_size(File **f, criterion *c) {
     }
 }
 
+void select_by_key(File **f, criterion *c) {
+    switch (c->op) {
+        case LT:
+            if (strcmp((*f)->key, c->value.value_str) >= 0)
+                *f = NULL;
+            break;
+        case LE:
+            if (strcmp((*f)->key, c->value.value_str) > 0)
+                *f = NULL;
+            break;
+        case EQ:
+            if (strcmp((*f)->key, c->value.value_str))
+                *f = NULL;
+            break;
+        case GE:
+            if (strcmp((*f)->key, c->value.value_str) < 0)
+                *f = NULL;
+            break;
+        case GT:
+            if (strcmp((*f)->key, c->value.value_str) <= 0)
+                *f = NULL;
+            break;
+        case DI:
+            if (!strcmp((*f)->key, c->value.value_str))
+                *f = NULL;
+            break;
+        default:
+            printf("UNRECOGNISED_OPERATOR ");
+    }
+}
+
 void select_files(int nb_files, File **f, int nb_criterion, criterion *c) {
     for (int i = 0; i < nb_files; ++i) {
         for (int j = 0; j < nb_criterion; ++j) {
@@ -499,6 +530,9 @@ void select_files(int nb_files, File **f, int nb_criterion, criterion *c) {
                     break;
                 case FILESIZE:
                     select_by_file_size(&f[i], &c[j]);
+                    break;
+                case KEY:
+                    select_by_key(&f[i], &c[j]);
                     break;
                 default:
                     printf("UNRECOGNISED_CRITERIA ");

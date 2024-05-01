@@ -120,6 +120,15 @@ void test_look() {
     lookData data5 = lookCheck("look [filesie>=\"9128\" filename=\"Alltab\"]");
     assert(lookStructCmp(data5, not_valid));
 
+    lookData data6 = lookCheck("look [filesize>=\"9128\" filename=\"Alttab\" key=\"dsqklmdsqklmdsqklmdsqklmdsqklmnj\"]");
+    criterion crit4 = {.criteria=KEY, .op=EQ, .value_type=STR, .value.value_str = "dsqklmdsqklmdsqklmdsqklmdsqklmnj"};
+    criterion crits2[3];
+    crits2[0] = crit2;
+    crits2[1] = crit3;
+    crits2[2] = crit4;
+    lookData expected_look_data6 = {.nb_criterions=3, .criterions=crits2, .is_valid=1};
+    assert(lookStructCmp(data6, expected_look_data6));
+
     free_regex(look_regex());
     free_lookData(&data);
     free_lookData(&data2);

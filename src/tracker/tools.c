@@ -281,6 +281,8 @@ lookData lookCheck(char *message) {
             criterions[index].criteria = FILENAME;
         } else if (streq(criteria, "filesize")) {
             criterions[index].criteria = FILESIZE;
+        } else if (streq(criteria, "key")) {
+            criterions[index].criteria = KEY;
         } else {
             fprintf(stderr, "Incorrect criteria : %s.\n", criteria);
             free(criterions);

@@ -51,7 +51,7 @@ func (p *Peer) HelloTrack(t Peer) {
 	p.Comm["tracker"] = p.Comm[conn.RemoteAddr().String()]
 }
 
-func (p *Peer) sendupdate(t Peer) {
+func (p *Peer) sendupdate() {
 	var seed string
 	var leech string
 	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
@@ -83,9 +83,8 @@ func (p *Peer) sendupdate(t Peer) {
 		seed = strings.TrimSuffix(seed, " ")
 		leech = strings.TrimSuffix(leech, " ")
 		message += seed + "] leech [" + leech + "]\n"
-		conn, err := net.Dial("tcp", t.IP+":"+t.Port)
-		errorCheck(err)
-		_, err = conn.Write([]byte(message))
+		conn := p.Comm["tracker"]
+		_, err := conn.Write([]byte(message))
 		errorCheck(err)
 		buffer := make([]byte, 1024)
 		err = conn.SetReadDeadline(time.Now().Add(time.Duration(float64(timeout) * math.Pow(10, 9))))
@@ -106,7 +105,12 @@ func (p *Peer) rarepiece() {
 	for {
 		WriteReadConnection(conn, p, "look []\n")
 		for key := range tools.RemoteFiles {
-			if _, valid := p.Files[key]; !valid || !tools.ArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence) {
+			// fmt.Println("Im in the boucle :)")
+			if _, valid := p.Files[key]; !valid || !tools.ArrayCheck(*p.Files[key].Peers["self"].BufferMaps[key]) {
+				// fmt.Println("rare piece key :", key)
+				byteArray = make([]int, tools.BufferBitSize(*tools.RemoteFiles[key]))
+				connArray = make(map[int][]net.Conn, tools.BufferBitSize(*tools.RemoteFiles[key]))
+				// fmt.Println("byte array: ", byteArray, connArray)
 				k := max(int(tools.BufferBitSize(*tools.RemoteFiles[key])/4), 1)
 				// fmt.Println(k, tools.RemoteFiles[key].PieceSize, tools.RemoteFiles[key].Size)
 				rareArray := make([]int, k)
@@ -115,31 +119,33 @@ func (p *Peer) rarepiece() {
 				mutex.Unlock()
 				WriteReadConnection(conn, p, "getfile "+key+"\n")
 				for connRem := range tools.RemoteFiles[key].Peers {
-					p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
-					j := 0
-					if byteArray == nil {
-						byteArray = make([]int, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length)
-						connArray = make(map[int][]net.Conn, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length)
+					// TODO : Faire un if pour regarder si on a deja fais un interested en regarder p.BufferMaps
+					if rconn, valid := p.Comm[connRem]; !valid {
+						p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
+					} else {
+						WriteReadConnection(rconn, p, "interested "+key+"\n")
 					}
 					for i := range tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length {
-						// fmt.Print(i, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, byteArray, connArray, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length)
-						if byteArray[j] != int(math.Inf(1)) {
-							if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, i) {
-								connArray[j] = append(connArray[j], p.Comm[connRem])
-								byteArray[j] += 1
-							} else if tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, i) {
-								byteArray[j] = int(math.Inf(1))
+						if byteArray[i] != int(math.Inf(1)) {
+							if tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, i) {
+								byteArray[i] = int(math.Inf(1))
+							} else if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, i) {
+								connArray[i] = append(connArray[i], p.Comm[connRem])
+								byteArray[i] += 1
+
 							}
 						}
-						j++
 					}
 
 					// fmt.Print(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, byteArray, connArray, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length)
 				}
+				// fmt.Println("New byte array", byteArray, connArray)
+
 				minIndex := 0
 				for i := 0; i < k; i++ {
+					minIndex = i
 					for x := i + 1; x < len(byteArray); x++ {
-						if byteArray[x] < byteArray[minIndex] {
+						if (byteArray[minIndex] < 0) || (byteArray[x] > 0 && byteArray[x] < byteArray[minIndex]) {
 							minIndex = x
 						}
 					}
@@ -147,13 +153,17 @@ func (p *Peer) rarepiece() {
 					byteArray[i], byteArray[minIndex] = byteArray[minIndex], byteArray[i]
 					rareArray[i] = minIndex
 				}
-				for index := range rareArray { // TODO : Can improve is in case its only one peer to send it only once
-					fmt.Println(index, rareArray)
+				for _, index := range rareArray { // TODO : Can improve is in case its only one peer to send it only once
+					if index < 0 {
+						continue
+					}
 					// fmt.Println(connArray, connArray[index], len(connArray[index]), rareArray, byteArray)
 					WriteReadConnection(connArray[index][rand.Intn(len(connArray[index]))], p, "getpieces "+key+" ["+strconv.Itoa(index)+"]\n") // Beter with sprintf maybe
 					time.Sleep(time.Millisecond)
 				}
 				break
+			} else {
+				continue
 			}
 		}
 		time.Sleep(time.Duration(math.Pow(10, 9) * float64(t)))
@@ -261,17 +271,16 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			fmt.Printf("%s\n", mess)
 			valid, data := tools.DataCheck(mess)
 			if valid {
-				fmt.Println(conn.RemoteAddr(), ":", mess)
+				// fmt.Println(conn.RemoteAddr(), ":", mess)
 				path := tools.GetValueFromConfig("Peer", "path")
 				if path == "" {
 					path = "share"
 				}
 				os.MkdirAll(filepath.Join("./", path, "/", p.Files[data.Key].Name), os.FileMode(0777))
-				fmt.Println("the file is", p.Files[data.Key])
 				file := p.Files[data.Key]
-				fdf, err := os.OpenFile(filepath.Join(path, p.Files[data.Key].Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
+				fdf, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
 				errorCheck(err)
-				fdc, err := os.OpenFile(filepath.Join(path, p.Files[data.Key].Name+"/manifest"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
+				fdc, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/manifest"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
 				errorCheck(err)
 				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)
@@ -290,13 +299,15 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					}
 					_, err = fdc.WriteString("\n" + time.Now().String() + "Downloading the " + fmt.Sprint(data.Pieces[i].Index) + " piece.")
 					errorCheck(err)
-					tools.ByteArrayWrite(&file.Peers["self"].BufferMaps[data.Key].BitSequence, data.Pieces[i].Index)
+					tools.ByteArrayWrite(&file.Peers[conn.LocalAddr().String()].BufferMaps[data.Key].BitSequence, data.Pieces[i].Index)
 				}
 				if hash := tools.GetMD5Hash(filepath.Join(path, p.Files[data.Key].Name+"/file")); hash == data.Key {
-					err = os.Rename(filepath.Join(path, p.Files[data.Key].Name+"/file"), filepath.Join(path, p.Files[data.Key].Name))
+					err = os.Rename(filepath.Join("./", path, p.Files[data.Key].Name), filepath.Join(path, "todelete"))
+					errorCheck(err)
+					err = os.Rename(filepath.Join("./", path, "todelete", "/file"), filepath.Join(path, p.Files[data.Key].Name))
 					errorCheck(err)
 
-					err = os.RemoveAll(filepath.Join(path, p.Files[data.Key].Name))
+					err = os.RemoveAll(filepath.Join(path, "todelete"))
 					errorCheck(err)
 				}
 
@@ -341,9 +352,9 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 						Port:       p.Port,
 						BufferMaps: bufferMaps,
 					}
-					if _, valid := fil.Peers["self"].BufferMaps[data.Key]; !valid {
-						p.Files[data.Key].Peers["self"].BufferMaps = make(map[string]*tools.BufferMap)
-					}
+					// if _, valid := fil.Peers["self"].BufferMaps[data.Key]; !valid {
+					// 	p.Files[data.Key].Peers["self"].BufferMaps = make(map[string]*tools.BufferMap)
+					// }
 					fil.Peers[conn.LocalAddr().String()] = fil.Peers["self"]
 					p.Files[data.Key] = &fil
 				}

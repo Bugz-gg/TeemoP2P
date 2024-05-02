@@ -57,9 +57,9 @@ func ByteArrayCheck(array []byte, index int) bool {
 
 // ArrayCheck tells you if the array is full of 1 or not.
 // Usefull is you want to know if a file is entirely dl.
-func ArrayCheck(array []byte) bool {
-	for i := 0; i < len(array); i++ {
-		if !ByteArrayCheck(array, i) {
+func ArrayCheck(buff BufferMap) bool {
+	for i := range buff.Length {
+		if !ByteArrayCheck(buff.BitSequence, i) {
 			return false
 		}
 	}

@@ -62,7 +62,7 @@ func StartPeer(IP string, Port string, Type string) Peer {
 	// fmt.Println(peer.Files)
 	tools.LocalFiles = &peer.Files
 	go peer.startListening()
-	go peer.sendupdate(track)
+	go peer.sendupdate()
 	time.Sleep(time.Millisecond)
 	peer.HelloTrack(track)
 	go peer.rarepiece()

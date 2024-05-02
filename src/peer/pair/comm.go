@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"peerproject/tools"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -171,64 +172,53 @@ func (p *Peer) rarepiece() {
 
 }
 
-// func (p *Peer) Downloading(key string) {
-// 	time.Sleep(time.Second)
-// 	conn := p.Comm["tracker"]
-// 	var byteArray []int
-// 	var dontHave []int
-// 	var connArray map[int][]net.Conn
-// 	for index := range p.Files[key].Peers["self"].BufferMaps[key].Length {
-// 		if !tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, index) {
-// 			dontHave = append(dontHave, index)
-// 		}
-// 	}
-// 	byteArray = make([]int, len(dontHave))
-// 	connArray = make(map[int][]net.Conn, len(dontHave))
-// 	WriteReadConnection(p.Comm["tracker"], p, "look [key="+key+"]\n")
-//
-// 	for connRem := range tools.RemoteFiles[key].Peers {
-// 		p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
-// 		j := 0
-// 		for i := range dontHave {
-// 			if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, i) {
-// 				connArray[i] = append(connArray[i], p.Comm[connRem])
-// 				byteArray[j] += 1
-// 			}
-// 			j++
-// 		}
-//   }
-//
-// 		for tools.BitCount(p.Files[key].Peers["self"].BufferMaps[key]) == nbPieces {
-// 			k := max(int(tools.BufferBitSize(*tools.RemoteFiles[key])/4), 1)
-// 			// fmt.Println(k, tools.RemoteFiles[key].PieceSize, tools.RemoteFiles[key].Size)
-// 			rareArray := make([]int, k)
-// 			mutex.Lock()
-// 			rare = true
-// 			mutex.Unlock()
-// 			WriteReadConnection(conn, p, "getfile "+key+"\n")
-//
-// 			// fmt.Print(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, byteArray, connArray, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length)
-// 		}
-// 		minIndex := 0
-// 		for i := 0; i < k; i++ {
-// 			for x := i + 1; x < len(byteArray); x++ {
-// 				if byteArray[x] < byteArray[minIndex] {
-// 					minIndex = x
-// 				}
-// 			}
-// 			// fmt.Println(i, minIndex)
-// 			byteArray[i], byteArray[minIndex] = byteArray[minIndex], byteArray[i]
-// 			rareArray[i] = minIndex
-// 		}
-// 		for index := range rareArray { // TODO : Can improve is in case its only one peer to send it only once
-// 			fmt.Println(index, rareArray)
-// 			// fmt.Println(connArray, connArray[index], len(connArray[index]), rareArray, byteArray)
-// 			WriteReadConnection(connArray[index][rand.Intn(len(connArray[index]))], p, "getpieces "+key+" ["+strconv.Itoa(index)+"]\n") // Beter with sprintf maybe
-// 			time.Sleep(time.Millisecond)
-// 		}
-// 	}
-//
-// }
+func (p *Peer) Downloading(key string) {
+	time.Sleep(time.Second)
+	indexByConn := map[int][]net.Conn{} // All the indexes we don't have yet and the array of connections that have them.
+	connAsk := map[net.Conn][]string{}  // The indexes we'll ask from each connection.
+	var dontHave []int                  // To sort the wanted indexes by ascending order of number of peers having it.
+	for index := range p.Files[key].Peers["self"].BufferMaps[key].Length {
+		if !tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, index) { // Check which pieces are missing.
+			indexByConn[index] = []net.Conn{}
+			dontHave = append(dontHave, index)
+		}
+	}
+	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
+
+	for connRem := range tools.RemoteFiles[key].Peers {
+		p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
+		for index := range dontHave { // Get the list peers having a certain missing piece.
+			if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, index) {
+				indexByConn[index] = append(indexByConn[index], p.Comm[connRem])
+			}
+		}
+	}
+	sort.SliceStable(dontHave, func(i, j int) bool { // Sort by ascending order of number of peers.
+		return len(indexByConn[dontHave[i]]) < len(indexByConn[dontHave[j]])
+	})
+
+	for index := range dontHave { // Try to share the work between peers for each wanted piece.
+		if len(indexByConn[index]) == 0 { // No peer has the piece.
+			continue
+		}
+		conns := indexByConn[index] // List of peers having the piece.
+		requested := conns[0]
+		for _, conn := range conns[1:] {
+			if len(connAsk[conn]) > len(connAsk[requested]) {
+				break
+			}
+			if len(connAsk[conn]) < len(connAsk[requested]) {
+				requested = conn
+				break
+			}
+		}
+		connAsk[requested] = append(connAsk[requested], strconv.Itoa(index))
+	}
+
+	for conn, indexes := range connAsk {
+		WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(indexes, " ")+"]\n")
+	}
+}
 
 // TODO : Remote file stockage lors d une demande au tracker
 // TODO : Faire les chanegement dans les fonctions car changement de []file en map.

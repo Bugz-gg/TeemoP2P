@@ -231,6 +231,31 @@ func inputProg() {
 			} else {
 				fmt.Println("\u001B[92mYou need to launch a peer first.\u001B[39m")
 			}
+		case "Download", "dl", "dowload":
+			if !MyPeer.IsEmpty() {
+				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look []\n")
+				fmt.Print("\u001B[92mHere all the files you can dowload :\u001B[39m \n")
+				remoteFileKeys := make([]string, 0, len(tools.RemoteFiles))
+				for key := range tools.RemoteFiles {
+					remoteFileKeys = append(remoteFileKeys, key)
+				}
+
+				for i, key := range remoteFileKeys {
+					file := tools.RemoteFiles[key]
+					fmt.Printf("(%d) %s %s\n", i, file.Name, key)
+				}
+				fmt.Print("Selection: ")
+				input := readInput()
+				fileNum, err := strconv.Atoi(input)
+				if err != nil || fileNum < 0 || fileNum >= len(remoteFileKeys) {
+					fmt.Println("\u001B[91mInvalid selection.\u001B[39m")
+					return
+				}
+
+				selectedFile := remoteFileKeys[fileNum]
+				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "getfile "+selectedFile+"\n")
+				MyPeer.Downloading(selectedFile)
+			}
 		case "hd", "handle":
 			if !MyPeer.IsEmpty() {
 				handlePeer(&MyPeer, "handle")
@@ -250,7 +275,7 @@ func inputProg() {
 			}
 			os.Exit(0)
 		default:
-			fmt.Println("\u001B[91mCommand not found. Available commands: lp (launch a peer), connect, handle, close, exit\u001B[39m")
+			fmt.Println("\u001B[91mCommand not found. Available commands: lp (launch a peer), download, connect, handle, close, exit\u001B[39m")
 		}
 	}
 }

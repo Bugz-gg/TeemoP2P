@@ -177,11 +177,16 @@ func (p *Peer) Downloading(key string) {
 	indexByConn := map[int][]net.Conn{} // All the indexes we don't have yet and the array of connections that have them.
 	connAsk := map[net.Conn][]string{}  // The indexes we'll ask from each connection.
 	var dontHave []int                  // To sort the wanted indexes by ascending order of number of peers having it.
-	for index := range p.Files[key].Peers["self"].BufferMaps[key].Length {
-		if !tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, index) { // Check which pieces are missing.
-			indexByConn[index] = []net.Conn{}
-			dontHave = append(dontHave, index)
+	if _, valid := p.Files[key]; valid {
+
+		for index := range p.Files[key].Peers["self"].BufferMaps[key].Length {
+			if !tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, index) { // Check which pieces are missing.
+				indexByConn[index] = []net.Conn{}
+				dontHave = append(dontHave, index)
+			}
 		}
+	} else {
+		dontHave = nil
 	}
 	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
 

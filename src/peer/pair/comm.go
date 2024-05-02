@@ -164,6 +164,7 @@ func (p *Peer) rarepiece() {
 				}
 				break
 			} else {
+				time.Sleep(time.Duration(math.Pow(10, 9) * float64(t)))
 				continue
 			}
 		}
@@ -186,12 +187,19 @@ func (p *Peer) Downloading(key string) {
 			}
 		}
 	} else {
-		dontHave = nil
+		for i := range tools.BufferBitSize(*tools.RemoteFiles[key]) {
+			dontHave = append(dontHave, i)
+
+		}
 	}
 	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
 
 	for connRem := range tools.RemoteFiles[key].Peers {
-		p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
+		if rconn, valid := p.Comm[connRem]; !valid {
+			p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
+		} else {
+			WriteReadConnection(rconn, p, "interested "+key+"\n")
+		}
 		for index := range dontHave { // Get the list peers having a certain missing piece.
 			if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, index) {
 				indexByConn[index] = append(indexByConn[index], p.Comm[connRem])
@@ -244,7 +252,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	}
 	conn.Write([]byte(message))
 
-	buffer := make([]byte, 32768)
+	buffer := make([]byte, 65536)
 	var eom string
 	var n int
 	var nerr error = nil
@@ -352,6 +360,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					// }
 					fil.Peers[conn.LocalAddr().String()] = fil.Peers["self"]
 					p.Files[data.Key] = &fil
+					fmt.Println(p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key])
 				}
 				if previousMessage == "interested" {
 					// go p.progression(data.Key, conn)

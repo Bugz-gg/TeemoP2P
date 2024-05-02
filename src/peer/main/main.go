@@ -253,7 +253,6 @@ func inputProg() {
 				}
 
 				selectedFile := remoteFileKeys[fileNum]
-				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "getfile "+selectedFile+"\n")
 				MyPeer.Downloading(selectedFile)
 			}
 		case "hd", "handle":

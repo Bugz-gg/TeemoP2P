@@ -96,12 +96,12 @@ func (p *Peer) sendupdate() {
 }
 
 func (p *Peer) rarepiece() {
-	time.Sleep(time.Second)
 	conn := p.Comm["tracker"]
 	t, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "time_dl_rare_piece"))
 	var byteArray []int
 	var connArray map[int][]net.Conn
 	for {
+		time.Sleep(time.Duration(math.Pow(10, 9) * float64(t)))
 		WriteReadConnection(conn, p, "look []\n")
 		for key := range tools.RemoteFiles {
 			// fmt.Println("Im in the boucle :)")
@@ -131,7 +131,6 @@ func (p *Peer) rarepiece() {
 							} else if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, i) {
 								connArray[i] = append(connArray[i], p.Comm[connRem])
 								byteArray[i] += 1
-
 							}
 						}
 					}
@@ -156,15 +155,10 @@ func (p *Peer) rarepiece() {
 					}
 					// fmt.Println(connArray, connArray[index], len(connArray[index]), rareArray, byteArray)
 					WriteReadConnection(connArray[index][rand.Intn(len(connArray[index]))], p, "getpieces "+key+" ["+strconv.Itoa(index)+"]\n") // Beter with sprintf maybe
-					time.Sleep(time.Millisecond)
 				}
 				break
-			} else {
-				time.Sleep(time.Duration(math.Pow(10, 9) * float64(t)))
-				continue
 			}
 		}
-		time.Sleep(time.Duration(math.Pow(10, 9) * float64(t)))
 	}
 
 }

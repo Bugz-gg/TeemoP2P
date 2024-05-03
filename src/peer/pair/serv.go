@@ -52,7 +52,7 @@ func worker(jobs chan Job, p *Peer) {
 		mess = strings.Split(mess, "\n")[0]
 		input := strings.Split(mess, " ")[0]
 
-		fmt.Printf("[\u001B[0;33m%s\u001B[39m]: %s\n", conn.RemoteAddr().String(), mess)
+		// fmt.Printf("[\u001B[0;33m%s\u001B[39m]: %s\n", conn.RemoteAddr().String(), mess)
 		tools.WriteLog("[%s]: %s\n", conn.RemoteAddr().String(), mess)
 
 		switch input {
@@ -61,7 +61,7 @@ func worker(jobs chan Job, p *Peer) {
 			if valid {
 				file := p.Files[data.Key]
 				buff := "have " + data.Key + " " + tools.BufferMapToString(*file.Peers["self"].BufferMaps[data.Key]) + "\n"
-				fmt.Printf("\033[0;35mSending to\u001B[39m [\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), buff)
+				// fmt.Printf("\033[0;35mSending to\u001B[39m [\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), buff)
 				tools.WriteLog("Sending to %s:%s\n", conn.RemoteAddr().String(), buff)
 				_, err := conn.Write([]byte(buff))
 				errorCheck(err)

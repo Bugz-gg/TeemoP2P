@@ -135,7 +135,9 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 		fmt.Println("\u001B[92mPerforming 'getpieces' command...\u001B[39m")
 		remoteFileKeys := make([]string, 0, len(tools.RemoteFiles))
 		for key := range tools.RemoteFiles {
-			remoteFileKeys = append(remoteFileKeys, key)
+			if _, valid := MyPeer.Files[key]; valid {
+				remoteFileKeys = append(remoteFileKeys, key)
+			}
 		}
 
 		// Display files with their keys

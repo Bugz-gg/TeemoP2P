@@ -231,7 +231,7 @@ func inputProg() {
 			} else {
 				fmt.Println("\u001B[92mYou need to launch a peer first.\u001B[39m")
 			}
-		case "Download", "dl", "dowload":
+		case "Download", "dl", "download":
 			if !MyPeer.IsEmpty() {
 				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look []\n")
 				fmt.Print("\u001B[92mHere all the files you can dowload :\u001B[39m \n")

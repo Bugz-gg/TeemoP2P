@@ -118,7 +118,7 @@ func (p *Peer) rarepiece() {
 				mutex.Unlock()
 				WriteReadConnection(conn, p, "getfile "+key+"\n")
 				for connRem := range tools.RemoteFiles[key].Peers {
-					// TODO : Faire un if pour regarder si on a deja fais un interested en regarder p.BufferMaps
+					// TODO : Faire un if pour regarder si on a deja fait un interested en regardant p.BufferMaps
 					if rconn, valid := p.Comm[connRem]; !valid {
 						p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
 					} else {
@@ -150,7 +150,7 @@ func (p *Peer) rarepiece() {
 					byteArray[i], byteArray[minIndex] = byteArray[minIndex], byteArray[i]
 					rareArray[i] = minIndex
 				}
-				for _, index := range rareArray { // TODO : Can improve is in case its only one peer to send it only once
+				for _, index := range rareArray { // TODO : Can improve in case its only one peer to send it only once
 					if index < 0 {
 						continue
 					}
@@ -265,12 +265,13 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 		mess := eom
 		mess = strings.TrimSuffix(mess, "\n")
 		input := strings.Split(mess, " ")[0]
+		fmt.Printf("[\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), mess)
+		tools.WriteLog("%s:%s\n", conn.RemoteAddr().String(), mess)
 		switch input {
-		case "data", "data\n":
+		case "data":
 			fmt.Printf("%s\n", mess)
 			valid, data := tools.DataCheck(mess)
 			if valid {
-				// fmt.Println(conn.RemoteAddr(), ":", mess)
 				path := tools.GetValueFromConfig("Peer", "path")
 				if path == "" {
 					path = "share"
@@ -313,9 +314,10 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				fdf.Close()
 				fdc.Close()
 			} else {
-				fmt.Println("\u001B[92mInvalid data response...\u001B[39m")
+				fmt.Println("\u001B[92mInvalid data response.\u001B[39m")
+				tools.WriteLog("\u001B[92mInvalid data response.\u001B[39m\n")
 			}
-		case "have", "have\n":
+		case "have":
 			valid, data := tools.HaveCheck(mess)
 
 			if valid {
@@ -367,21 +369,20 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 
 				fmt.Println(conn.RemoteAddr(), ":", mess)
 			} else {
-				fmt.Println("\u001B[92mInvalid have response...\u001B[39m")
+				fmt.Println("\u001B[92mInvalid have response.\u001B[39m")
+				tools.WriteLog("\u001B[92mInvalid have response.\u001B[39m\n")
 			}
-		case "OK", "OK\n":
-			fmt.Println(conn.RemoteAddr(), ":", mess)
-		case "list", "list\n":
+		case "OK":
+
+		case "list":
 			valid, _ := tools.ListCheck(mess)
-			if valid {
-				fmt.Println(conn.RemoteAddr(), ":", mess)
-			} else {
-				fmt.Println("\u001B[92mInvalid list response...\u001B[39m")
+			if !valid {
+				fmt.Println("\u001B[92mInvalid list response.\u001B[39m")
+				tools.WriteLog("\u001B[92mInvalid list response.\u001B[39m\n")
 			}
-		case "peers", "peers\n":
+		case "peers":
 			valid := tools.PeersCheck(mess)
 			if valid {
-				fmt.Println(conn.RemoteAddr(), ":", mess)
 				key := strings.Split(mess, " ")[1]
 				mutex.Lock()
 				previousMessage = "interested"
@@ -390,15 +391,14 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					p.interested(key)
 				}
 			} else {
-				fmt.Println("\u001B[92mInvalid peers response...\u001B[39m")
+				fmt.Println("\u001B[92mInvalid peers response.\u001B[39m")
+				tools.WriteLog("\u001B[92mInvalid peers response.\u001B[39m\n")
 			}
 		case "\u001B[92mInvalid command you have no tries remaining, connection is closed...\u001B[39m":
 			p.Close(conn.RemoteAddr().String())
 		default:
 			// panic("valeur par default et pas parmi la liste")
 			// je dois prendre en compte que si je n'ai plus d'essai de fermer de mon cote la conn.
-			fmt.Println(string(buffer[:]))
-
 		}
 	}
 }
@@ -408,7 +408,6 @@ func (p *Peer) interested(key string) {
 	l := len(temp.Peers)
 	it := l
 	for max, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_peers_to_connect")); max != 0 && it > 0; max-- {
-		//random := rand.Intn(l)
 		var randomPeer tools.Peer
 		k := rand.Intn(l)
 		for _, peer := range temp.Peers {

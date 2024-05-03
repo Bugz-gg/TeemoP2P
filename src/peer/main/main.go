@@ -285,7 +285,7 @@ func main() {
 	go func() {
 		for {
 			s := <-sigchnl
-			fmt.Println("Received :", s, ". Please exit the code proprely by typing exit :)")
+			fmt.Println("Received :", s, ". Please exit the code properly by typing exit :)")
 		}
 	}()
 	tools.LogFile, _ = tools.OpenLog()

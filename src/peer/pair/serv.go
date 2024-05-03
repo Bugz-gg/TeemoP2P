@@ -70,22 +70,7 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
-				fmt.Println(conn.LocalAddr(), buffer)
-				fmt.Printf("[\u001B[0;33m%s\u001B[39m] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-				tools.WriteLog("[%s] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-				_, err := conn.Write([]byte(buffer))
-				errorCheck(err)
-
-				if attempt <= 0 {
-					buffer := "Invalid command you have no tries remaining, connection is closed...\n"
-					fmt.Println(conn.LocalAddr(), buffer, mess, "interested")
-					fmt.Printf("[\u001B[0;33m%s\u001B[39m] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
-					tools.WriteLog("[%s] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
-					_, err := conn.Write([]byte(buffer)) // ?? Pas besoin de prévenir, la connection est fermée à la ligne d'après.
-					conn.Close()
-					errorCheck(err)
-				}
+				decreaseAttempts(conn, attempt)
 			}
 		case "getpieces":
 			fmt.Println(conn.RemoteAddr().String(), ":", mess)
@@ -116,20 +101,7 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
-				fmt.Printf("[\u001B[0;33m%s\u001B[39m] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-				tools.WriteLog("[%s] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-				_, err := conn.Write([]byte(buffer))
-				errorCheck(err)
-
-				if attempt <= 0 {
-					buffer := "Invalid command you have no tries remaining, connection is closed...\n"
-					fmt.Printf("[\u001B[0;33m%s\u001B[39m] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
-					tools.WriteLog("[%s] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
-					_, err := conn.Write([]byte(buffer)) // ?? Pas besoin de prévenir, la connection est fermée à la ligne d'après.
-					conn.Close()
-					errorCheck(err)
-				}
+				decreaseAttempts(conn, attempt)
 
 			}
 			// TODO : Faire en sorte que ça s" envoie toutes les 3 dl de pieces.
@@ -144,20 +116,7 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
-				fmt.Printf("[\u001B[0;33m%s\u001B[39m] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-				tools.WriteLog("[%s] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-				_, err := conn.Write([]byte(buffer))
-				errorCheck(err)
-
-				if attempt <= 0 {
-					buffer := "Invalid command you have no tries remaining, connection is closed...\n"
-					fmt.Printf("[\u001B[0;33m%s\u001B[39m] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
-					tools.WriteLog("[%s] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
-					_, err := conn.Write([]byte(buffer)) // ?? Pas besoin de prévenir, la connection est fermée à la ligne d'après.
-					conn.Close()
-					errorCheck(err)
-				}
+				decreaseAttempts(conn, attempt)
 			}
 		case "exit":
 			conn.Close()
@@ -167,21 +126,26 @@ func worker(jobs chan Job, p *Peer) {
 			attempts.m[conn]--
 			attempt--
 			attempts.Unlock()
-			buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
-			fmt.Printf("[\u001B[0;33m%s\u001B[39m] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-			tools.WriteLog("[%s] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
-			_, err := conn.Write([]byte(buffer))
-			errorCheck(err)
-
-			if attempt <= 0 {
-				buffer := "Invalid command you have no tries remaining, connection is closed...\n"
-				fmt.Printf("[\u001B[0;33m%s\u001B[39m] Connection closed due to invalid messages\n", conn.RemoteAddr().String())
-				tools.WriteLog("[%s] Connection closed due to invalid messages", conn.RemoteAddr().String())
-				_, err := conn.Write([]byte(buffer)) // ?? Pas besoin de prévenir, la connection est fermée à la ligne d'après.
-				conn.Close()
-				errorCheck(err)
-			}
+			decreaseAttempts(conn, attempt)
 		}
+	}
+}
+
+func decreaseAttempts(conn net.Conn, attempt int) {
+	buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
+	fmt.Println(conn.LocalAddr(), buffer)
+	fmt.Printf("[\u001B[0;33m%s\u001B[39m] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
+	tools.WriteLog("[%s] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
+	_, err := conn.Write([]byte(buffer))
+	errorCheck(err)
+
+	if attempt <= 0 {
+		buffer := "Invalid command you have no tries remaining, connection is closed...\n"
+		fmt.Printf("[\u001B[0;33m%s\u001B[39m] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
+		tools.WriteLog("[%s] Connection closed due to invalid messages.\n", conn.RemoteAddr().String())
+		_, err := conn.Write([]byte(buffer)) // ?? Pas besoin de prévenir, la connection est fermée à la ligne d'après.
+		conn.Close()
+		errorCheck(err)
 	}
 }
 

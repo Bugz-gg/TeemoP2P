@@ -1,6 +1,7 @@
 package peer_package
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"math"
@@ -148,11 +149,16 @@ func checkAttempts(conn net.Conn, attempt int) {
 	}
 }
 
-func (p *Peer) startListening() {
+func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 	l, err := net.Listen("tcp", p.IP+":"+p.Port)
-	if err != nil {
+	for err != nil {
 		fmt.Println("Listen error:", err)
-		return
+		fmt.Println("Please choose an other port this one is already bind :")
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		text = strings.TrimSpace(text)
+		l, err = net.Listen("tcp", p.IP+":"+text)
+		p.Port = text
 	}
 	defer l.Close()
 

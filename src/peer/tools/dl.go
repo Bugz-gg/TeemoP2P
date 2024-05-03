@@ -14,9 +14,9 @@ import (
 func FillFilesFromConfig(conn string) map[string]*File {
 	path := GetValueFromConfig("Peer", "path")
 	if path == "" {
-		return nil
+		path = "share"
 	}
-
+	os.MkdirAll(filepath.Join("./", path), os.FileMode(0777))
 	files, err := searchFiles(path)
 	if err != nil {
 		return nil

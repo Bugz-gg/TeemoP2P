@@ -90,7 +90,7 @@ func (p *Peer) sendupdate() {
 		err = conn.SetReadDeadline(time.Now().Add(time.Duration(float64(timeout) * math.Pow(10, 9))))
 		n, err := conn.Read(buffer)
 		err = conn.SetReadDeadline(time.Time{})
-		if err == nil {
+		if err != nil {
 			fmt.Print(string(buffer[:n]))
 		}
 	}

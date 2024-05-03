@@ -162,6 +162,11 @@ func ListCheck(message string) (bool, ListData) {
 			listStruct.Files = append(listStruct.Files, *file)
 			//RemoteFiles[key] = &file
 		}
+		fmt.Printf("Listed files:\n")
+		for _, file := range listStruct.Files {
+			fmt.Printf("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s\n",
+				file.Name, file.Size, file.PieceSize, file.Key)
+		}
 		return true, listStruct
 	}
 	return false, ListData{}
@@ -174,6 +179,7 @@ func InterestedCheck(message string) (bool, InterestedData) {
 			fmt.Println("No such file locally.")
 			return false, InterestedData{}
 		}
+		fmt.Printf("\033[0;34mInterested key\033[39m: %s\n", match[1])
 		return true, InterestedData{Key: match[1]}
 	}
 	return false, InterestedData{}
@@ -193,6 +199,7 @@ func HaveCheck(message string) (bool, HaveData) {
 		if len(buffer) != BufferBitSize(*file) {
 			return false, HaveData{}
 		}
+		fmt.Printf("\033[0;34mReceived buffermap for\033[39m: %s (%s)\n", file.Name, file.Key)
 		return true, HaveData{Key: match[1], BufferMap: StringToBufferMap(buffer)}
 	}
 	return false, HaveData{}
@@ -220,6 +227,11 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 				fmt.Println("Invalid pieces' numbers :", i)
 			}
 		}
+		fmt.Printf("\033[0;34mWanted pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
+		for _, i := range pieces {
+			fmt.Printf("%d ", i)
+		}
+		fmt.Printf("\n")
 		return true, GetPiecesData{Key: match[1], Pieces: pieces}
 	}
 	return false, GetPiecesData{}
@@ -264,6 +276,11 @@ func DataCheck(message string) (bool, DataData) {
 			// Check integrity of file if all pieces have been downloaded ?
 
 		}
+		fmt.Printf("\033[0;34mReceived pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
+		for _, i := range pieces {
+			fmt.Printf("%d ", i)
+		}
+		fmt.Printf("\n")
 		return true, DataData{Key: match[1], Pieces: pieces}
 	}
 	return false, DataData{}
@@ -288,7 +305,7 @@ func PeersCheck(message string) bool {
 		if peers == nil {
 			peers = make(map[string]*Peer)
 		}
-
+		fmt.Printf("Listed peers:\n")
 		// Check if peer already registered
 		for _, data := range peersdata {
 			info := strings.Split(data, ":")
@@ -300,6 +317,7 @@ func PeersCheck(message string) bool {
 			if _, valid := RemoteFiles[match[1]].Peers[peerId]; !valid { // Add peer to owners of the remote file if not already in.
 				RemoteFiles[match[1]].Peers[peerId] = AllPeers[peerId]
 			}
+			fmt.Printf("\033[0;34m%s:%s\033[39m\n", info[0], info[1])
 
 			peers[peerId] = AllPeers[peerId] // Add peer to list of peers having the file.
 		}

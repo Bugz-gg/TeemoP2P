@@ -43,7 +43,7 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 
 	selectedPeer := peerList[peerNum]
 	fmt.Println("\u001B[92mAvailable commands:\u001B[39m")
-	if selectedPeer == peer.GetConfig().IP+":"+peer.GetConfig().Port {
+	if selectedPeer == peer.GetConfig().IP+":"+peer.GetConfig().Port || selectedPeer == "tracker" {
 		fmt.Println("\u001B[96m(0) look\u001B[39m")
 		fmt.Println("\u001B[96m(1) getfile\u001B[39m")
 	} else {

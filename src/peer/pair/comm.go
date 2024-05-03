@@ -19,6 +19,7 @@ import (
 var mutex sync.Mutex
 var previousMessage string // To know if it was an interested or a have.<ScrollWheelDown>
 var rare bool
+var dl bool
 
 func (p *Peer) HelloTrack(t Peer) {
 	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
@@ -164,6 +165,9 @@ func (p *Peer) rarepiece() {
 }
 
 func (p *Peer) Downloading(key string) {
+	mutex.Lock()
+	dl = true
+	mutex.Unlock()
 	time.Sleep(time.Second)
 	indexByConn := map[int][]net.Conn{} // All the indexes we don't have yet and the array of connections that have them.
 	connAsk := map[net.Conn][]string{}  // The indexes we'll ask from each connection.
@@ -259,11 +263,10 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 		mess := eom
 		mess = strings.TrimSuffix(mess, "\n")
 		input := strings.Split(mess, " ")[0]
-		fmt.Printf("[\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), mess)
-		tools.WriteLog("%s:%s\n", conn.RemoteAddr().String(), mess)
+		// fmt.Printf("[\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), mess)
+		// tools.WriteLog("%s:%s\n", conn.RemoteAddr().String(), mess)
 		switch input {
 		case "data":
-			fmt.Printf("%s\n", mess)
 			valid, data := tools.DataCheck(mess)
 			if valid {
 				path := tools.GetValueFromConfig("Peer", "path")
@@ -354,11 +357,18 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					p.Files[data.Key] = &fil
 					fmt.Println(p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key])
 				}
-				if previousMessage == "interested" {
-					// go p.progression(data.Key, conn)
+				if previousMessage == "interested" && !rare && !dl {
+					go p.progression(data.Key, conn)
 					time.Sleep(2)
-				} else {
-					time.Sleep(2) // Handle new pieces.
+				} else if rare {
+					time.Sleep(2)
+					mutex.Lock()
+					rare = false
+					mutex.Unlock()
+				} else if dl {
+					mutex.Lock()
+					dl = false
+					mutex.Unlock()
 				}
 
 				fmt.Println(conn.RemoteAddr(), ":", mess)
@@ -381,7 +391,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				mutex.Lock()
 				previousMessage = "interested"
 				mutex.Unlock()
-				if !rare {
+				if !rare || !dl {
 					p.interested(key)
 				}
 			} else {

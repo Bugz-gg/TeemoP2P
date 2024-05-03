@@ -36,7 +36,6 @@ func (p *Peer) HelloTrack(t Peer) {
 	conn, err := net.Dial("tcp", t.IP+":"+t.Port)
 	errorCheck(err)
 	// defer conn.Close()
-	message = string(message)
 	_, err = conn.Write([]byte(message))
 	errorCheck(err)
 	buffer := make([]byte, 1024)
@@ -66,8 +65,7 @@ func (p *Peer) sendupdate() {
 			key, BitSequence, notEmpty := valeur.GetFileUpdate()
 			if notEmpty {
 				temp := 0
-				// for k := range len(BitSequence) {
-				for k := 0; k < len(BitSequence); k++ {
+				for k := range len(BitSequence) {
 					if !tools.ByteArrayCheck(BitSequence, k) {
 						temp++
 					}
@@ -140,8 +138,6 @@ func (p *Peer) rarepiece() {
 
 					// fmt.Print(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, byteArray, connArray, tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].Length)
 				}
-				// fmt.Println("New byte array", byteArray, connArray)
-
 				minIndex := 0
 				for i := 0; i < k; i++ {
 					minIndex = i
@@ -298,7 +294,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 						errorCheck(err)
 					}
 					if n <= 0 {
-						fmt.Println("File as not being written. :(", err, data.Pieces[i].Data.BitSequence)
+						fmt.Println("File has not being written. :(", err, data.Pieces[i].Data.BitSequence)
 					}
 					_, err = fdc.WriteString("\n" + time.Now().String() + "Downloading the " + fmt.Sprint(data.Pieces[i].Index) + " piece.")
 					errorCheck(err)

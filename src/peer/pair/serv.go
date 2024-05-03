@@ -70,7 +70,7 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				decreaseAttempts(conn, attempt)
+				checkAttempts(conn, attempt)
 			}
 		case "getpieces":
 			fmt.Println(conn.RemoteAddr().String(), ":", mess)
@@ -101,10 +101,9 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				decreaseAttempts(conn, attempt)
-
+				checkAttempts(conn, attempt)
 			}
-			// TODO : Faire en sorte que ça s" envoie toutes les 3 dl de pieces.
+			// TODO : Faire en sorte que ça s'envoie tous les 3 dl de pieces.
 		case "have":
 			valid, data := tools.HaveCheck(mess)
 			if valid {
@@ -116,7 +115,7 @@ func worker(jobs chan Job, p *Peer) {
 				attempts.m[conn]--
 				attempt--
 				attempts.Unlock()
-				decreaseAttempts(conn, attempt)
+				checkAttempts(conn, attempt)
 			}
 		case "exit":
 			conn.Close()
@@ -126,12 +125,12 @@ func worker(jobs chan Job, p *Peer) {
 			attempts.m[conn]--
 			attempt--
 			attempts.Unlock()
-			decreaseAttempts(conn, attempt)
+			checkAttempts(conn, attempt)
 		}
 	}
 }
 
-func decreaseAttempts(conn net.Conn, attempt int) {
+func checkAttempts(conn net.Conn, attempt int) {
 	buffer := "Invalid command you have " + strconv.Itoa(attempts.m[conn]) + " tries remaining\n"
 	fmt.Println(conn.LocalAddr(), buffer)
 	fmt.Printf("[\u001B[0;33m%s\u001B[39m] Invalid command. %d tries remaining.\n", conn.RemoteAddr().String(), attempts.m[conn])
@@ -158,7 +157,7 @@ func (p *Peer) startListening() {
 	defer l.Close()
 
 	fmt.Println("Server listening on port", p.Port)
-	tools.WriteLog("Server listening on port: %d\n", p.Port)
+	tools.WriteLog("Server listening on port: %s\n", p.Port)
 
 	epfd, err := unix.EpollCreate1(0)
 	if err != nil {

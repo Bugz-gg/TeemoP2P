@@ -354,7 +354,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					// }
 					fil.Peers[conn.LocalAddr().String()] = fil.Peers["self"]
 					p.Files[data.Key] = &fil
-					fmt.Println(p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key])
+					// fmt.Println(p.Files[data.Key].Peers[conn.LocalAddr().String()].BufferMaps[data.Key])
 				}
 				if previousMessage == "interested" && !rare && !dl {
 					go p.progression(data.Key, conn)
@@ -370,7 +370,6 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					mutex.Unlock()
 				}
 
-				fmt.Println(conn.RemoteAddr(), ":", mess)
 			} else {
 				fmt.Println("\u001B[92mInvalid have response.\u001B[39m")
 				tools.WriteLog("\u001B[92mInvalid have response.\u001B[39m\n")

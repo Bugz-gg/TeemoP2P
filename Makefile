@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror -g
+CFLAGS = -Wall -Werror -g -fsanitize=address
 LDFLAGS = -lpthread
 OBJ = thpool.o tools.o tracker.o main.o
 DEPS = thpool.h tools.h tracker.h

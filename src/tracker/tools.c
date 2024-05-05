@@ -168,7 +168,7 @@ announceData announceCheck(char *message) {
     int len_port = matches[1].rm_eo - matches[1].rm_so;
     strncpy(port_str, message + matches[1].rm_so, len_port);
     port_str[len_port] = '\0';
-    int port = atoi(port_str);
+    unsigned long long int port = strtoull(port_str, NULL, 10);
 
     char *filesData, *tofreefiles;
     filesData = tofreefiles = strndup(message + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
@@ -186,9 +186,9 @@ announceData announceCheck(char *message) {
             strcpy(files[index / 4].name, token);
             files[index / 4].peers = NULL;
         } else if (remainder == 1) {
-            files[index / 4].size = atoi(token);
+            files[index / 4].size = strtoull(token, NULL, 10);
         } else if (remainder == 2) {
-            files[index / 4].pieceSize = atoi(token);
+            files[index / 4].pieceSize = strtoull(token, NULL, 10);
         } else {
             strcpy(files[index / 4].key, token);
         }
@@ -551,7 +551,7 @@ void printAnnounceData(announceData data) {
     if (data.is_valid) {
         printf("Port: %d\n", data.port);
         for (int i = 0; i < data.nb_files; ++i) {
-            printf("File %d: %s, Size: %d, PieceSize: %d, Key: %s\n", i + 1,
+            printf("File %d: %s, Size: %lld, PieceSize: %lld, Key: %s\n", i + 1,
                    data.files[i].name, data.files[i].size, data.files[i].pieceSize,
                    data.files[i].key);
         }

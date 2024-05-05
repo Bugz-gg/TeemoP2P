@@ -31,7 +31,7 @@ void print_tracker_files(Tracker *t) {
             continue;
         streq(t->files[i]->name, "") ? printf("\033[0;34mLeech file key\033[39m:%s, \033[0;34mPeers' ids\033[39m: ",
                                               t->files[i]->key) : printf(
-                "\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s, \033[0;34mPeers' ids\033[39m: ",
+                "\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %lld(%lld), \033[0;34mKey\033[39m:%s, \033[0;34mPeers' ids\033[39m: ",
                 t->files[i]->name, t->files[i]->size, t->files[i]->pieceSize, t->files[i]->key);
         for (int j = 0; j < t->files[i]->max_peer_ind; ++j) {
             if (t->files[i]->peers[j] == NULL)
@@ -248,7 +248,7 @@ void look(Tracker *t, lookData *d, int socket_fd) {
         if (files[i] != NULL) {
             if (after_first)
                 write(socket_fd, " ", 1);
-            sprintf(tmp_buffer, "%s %d %d %s", files[i]->name, files[i]->size, files[i]->pieceSize, files[i]->key);
+            sprintf(tmp_buffer, "%s %lld %lld %s", files[i]->name, files[i]->size, files[i]->pieceSize, files[i]->key);
             write(socket_fd, tmp_buffer, strlen(tmp_buffer));
             after_first = 1;
         }

@@ -23,8 +23,8 @@ typedef struct {
 } Peer;
 
 typedef struct {
-    int size;
-    int pieceSize;
+    unsigned long long size;
+    unsigned long long pieceSize;
     char key[33];
     int nb_peers;
     int max_peer_ind;

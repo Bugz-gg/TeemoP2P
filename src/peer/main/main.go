@@ -236,7 +236,7 @@ func inputProg() {
 		case "Download", "dl", "download":
 			if !MyPeer.IsEmpty() {
 				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look []\n")
-				fmt.Print("\u001B[92mHere all the files you can dowload :\u001B[39m \n")
+				fmt.Print("\u001B[92mHere all the files you can download :\u001B[39m \n")
 				remoteFileKeys := make([]string, 0, len(tools.RemoteFiles))
 				for key := range tools.RemoteFiles {
 					remoteFileKeys = append(remoteFileKeys, key)
@@ -244,7 +244,7 @@ func inputProg() {
 
 				for i, key := range remoteFileKeys {
 					file := tools.RemoteFiles[key]
-					fmt.Printf("(%d) %s %s\n", i, file.Name, key)
+					fmt.Printf("(%d) %s %s (%d)\n", i, file.Name, key, file.Size)
 				}
 				fmt.Print("Selection: ")
 				input := readInput()
@@ -288,6 +288,7 @@ func main() {
 		for {
 			s := <-sigchnl
 			fmt.Println("Received :", s, ". Please exit the code properly by typing exit :)")
+			os.Exit(1)
 		}
 	}()
 	tools.LogFile, _ = tools.OpenLog()

@@ -3,13 +3,15 @@ package tools
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"io"
+	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
 	"strconv"
-
-	"gopkg.in/ini.v1"
+	"sync"
 )
+
+var config map[string]map[string]string
+var configMutex sync.Mutex
 
 func FillFilesFromConfig(conn string) map[string]*File {
 	path := GetValueFromConfig("Peer", "path")
@@ -53,19 +55,19 @@ func fillStruct(files []string, conn string) map[string]*File {
 
 		fileSize := fileInfo.Size()
 		pieceSizeStr := GetValueFromConfig("Peer", filepath.Base(filePath))
-		pieceSize, err := strconv.Atoi(pieceSizeStr)
+		pieceSize, err := strconv.ParseUint(pieceSizeStr, 10, 64)
 		if err != nil {
-			pieceSizeStr = GetValueFromConfig("Peer", "length_piece_default")
-			pieceSize, err = strconv.Atoi(pieceSizeStr)
+			pieceSizeStr = GetValueFromConfig("Peer", "default_piece_size")
+			pieceSize, err = strconv.ParseUint(pieceSizeStr, 10, 64)
 			if err != nil {
 				return nil
 			}
 		}
-		pieceSize = min(pieceSize, int(fileSize))
+		pieceSize = min(pieceSize, uint64(fileSize)) // Conversion to uint64 may cause errors.
 
 		fil := File{
 			Name:      filepath.Base(filePath),
-			Size:      int(fileSize),
+			Size:      uint64(fileSize), // Same here.
 			PieceSize: pieceSize,
 			Key:       GetMD5Hash(filePath),
 		}
@@ -82,7 +84,7 @@ func fillStruct(files []string, conn string) map[string]*File {
 		}
 		fil.Peers[conn] = fil.Peers["self"]
 		// for u := range BufferSize(fil) {
-		for u := 0; u < BufferBitSize(fil); u++ {
+		for u := range BufferBitSize(fil) {
 			BufferMapWrite(&(*(fil.Peers["self"].BufferMaps)[fil.Key]), u)
 		}
 		// fmt.Println(fil.BufferMap)
@@ -92,26 +94,57 @@ func fillStruct(files []string, conn string) map[string]*File {
 }
 
 func GetValueFromConfig(section string, key string) string {
+	if config == nil {
+		configMutex.Lock()
+		config = make(map[string]map[string]string)
+		configMutex.Unlock()
+	}
+	if config[section] == nil {
+		configMutex.Lock()
+		config[section] = make(map[string]string)
+		configMutex.Unlock()
+	}
+	if config[section][key] != "" {
+		return config[section][key]
+	}
 	file, err := ini.Load("config.ini")
 	if err != nil {
 		return err.Error()
 	}
 	sec := file.Section(section)
 
-	pieceSizeStr := sec.Key(key)
-	return pieceSizeStr.String()
-
+	valueStr := sec.Key(key).String()
+	configMutex.Lock()
+	config[section][key] = valueStr
+	configMutex.Unlock()
+	if valueStr == "" {
+		configMutex.Lock()
+		defaultValues := map[string]map[string]string{"Peer": {"time_dl_rare_piece": "6000",
+			"max_concurrency":      "2",
+			"max_peers":            "2000",
+			"max_peers_to_connect": "5",
+			"progress_value":       "2",
+			"update_time":          "120",
+			"timeout":              "5",
+			"max_buff_size":        "8392",
+			"default_piece_size":   "2048",
+			"max_message_attempts": "3",
+			"path":                 "share"}}
+		valueStr = defaultValues[section][key]
+		config[section][key] = defaultValues[section][key]
+		configMutex.Unlock()
+	}
+	return valueStr
 }
 
 func GetMD5Hash(filePath string) string {
-	file, err := os.Open(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return ""
 	}
-	defer file.Close()
 
 	hash := md5.New()
-	if _, err := io.Copy(hash, file); err != nil {
+	if _, err := hash.Write(data); err != nil {
 		return ""
 	}
 

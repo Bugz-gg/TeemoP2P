@@ -112,6 +112,7 @@ var PeersRegex = PeersRegexGen()
 // ListCheck checks the format of a `list` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
 func ListCheck(message string) (bool, ListData) {
 	if match := ListRegex().FindStringSubmatch(message); match != nil {
+		buffSize, _ := strconv.ParseUint(GetValueFromConfig("Peer", "max_buff_size"), 10, 64)
 		var filesData []string
 		if match[1] != "" {
 			filesData = strings.Split(match[1], " ")
@@ -125,8 +126,8 @@ func ListCheck(message string) (bool, ListData) {
 		for i := 0; i < nbFiles; i++ {
 			filename := filesData[i*4]
 
-			size, err := strconv.Atoi(filesData[i*4+1])
-			pieceSize, err2 := strconv.Atoi(filesData[i*4+2])
+			size, err := strconv.ParseUint(filesData[i*4+1], 10, 64)
+			pieceSize, err2 := strconv.ParseUint(filesData[i*4+2], 10, 64)
 
 			if err != nil || err2 != nil {
 				fmt.Println("Invalid conversion to int (size or piece size).", err, err2)
@@ -155,6 +156,9 @@ func ListCheck(message string) (bool, ListData) {
 			}
 
 			if _, valid := RemoteFiles[key]; !valid { // If not registered as a RemoteFile.
+				if pieceSize >= buffSize+100 { // If the piece size is too big.
+					continue
+				}
 				RemoteFiles[key] = &File{Name: filename, Size: size, PieceSize: pieceSize, Key: key, Peers: make(map[string]*Peer)} // Update the registered remote files.
 			}
 			file := RemoteFiles[key]
@@ -196,7 +200,7 @@ func HaveCheck(message string) (bool, HaveData) {
 
 		file := RemoteFiles[match[1]] // Change from LocalFiles to RemoteFiles. Maybe add check Local ?
 		//file = &File{Size: 12, PieceSize: 1, Key: "Uizhsja8hzUizhsja8hzUizhsja8hzsu"} // To be removed.
-		if len(buffer) != BufferBitSize(*file) {
+		if uint64(len(buffer)) != BufferBitSize(*file) { // len may not be able to return uint64 correctly
 			return false, HaveData{}
 		}
 		fmt.Printf("\033[0;34mReceived buffermap for\033[39m: %s (%s)\n", file.Name, file.Key)
@@ -221,7 +225,7 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 		file := (*LocalFiles)[match[1]]
 		var pieces []int
 		for _, i := range wantedPieces {
-			if i < BufferBitSize(*file) && ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, i) {
+			if uint64(i) < BufferBitSize(*file) && ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, uint64(i)) {
 				pieces = append(pieces, i)
 			} else {
 				fmt.Println("Invalid pieces' numbers :", i)
@@ -257,7 +261,7 @@ func DataCheck(message string) (bool, DataData) {
 		var pieces []Piece
 		for _, data := range piecesdata {
 			piece := strings.Split(data, ":")
-			index, _ := strconv.Atoi(piece[0])
+			index, _ := strconv.ParseUint(piece[0], 10, 64)
 			if index < 0 || index >= BufferBitSize(*file) { //file.BufferMapLength {
 				fmt.Printf("Out or range index received. (%d)\n", index)
 				return false, DataData{}
@@ -268,7 +272,7 @@ func DataCheck(message string) (bool, DataData) {
 				//return false, DataData{}
 				continue
 			}
-			if len(piece[1]) != piecesize*8 {
+			if uint64(len(piece[1])) != piecesize*8 { // len function may not be able to return uint64 correctly
 				fmt.Println("Wrong piece size received.")
 				return false, DataData{}
 			}
@@ -326,7 +330,7 @@ func PeersCheck(message string) bool {
 	return false
 }
 
-func (f *File) GetFile() (string, int, int, string, bool) {
+func (f *File) GetFile() (string, uint64, uint64, string, bool) {
 	if f.Name == "" && f.Size == 0 {
 		return f.Name, f.Size, f.PieceSize, f.Key, false
 	}

@@ -56,10 +56,10 @@ func (p *Peer) sendupdate() {
 	var seed string
 	var leech string
 	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
+	updateValue, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "update_time"))
 	for {
 		seed = ""
 		leech = ""
-		updateValue, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "update_time"))
 		time.Sleep(time.Duration(float64(updateValue) * math.Pow(10, 9)))
 		message := "update seed ["
 		for _, valeur := range p.Files {
@@ -67,7 +67,7 @@ func (p *Peer) sendupdate() {
 			if notEmpty {
 				temp := 0
 				for k := range len(BitSequence) {
-					if !tools.ByteArrayCheck(BitSequence, k) {
+					if !tools.ByteArrayCheck(BitSequence, uint64(k)) {
 						temp++
 					}
 				}
@@ -130,7 +130,7 @@ func (p *Peer) rarepiece() {
 							if tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, i) {
 								byteArray[i] = int(math.Inf(1))
 							} else if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, i) {
-								connArray[i] = append(connArray[i], p.Comm[connRem])
+								connArray[int(i)] = append(connArray[int(i)], p.Comm[connRem])
 								byteArray[i] += 1
 							}
 						}
@@ -165,15 +165,20 @@ func (p *Peer) rarepiece() {
 }
 
 func (p *Peer) Downloading(key string) {
+	buffSize, _ := strconv.ParseUint(tools.GetValueFromConfig("Peer", "max_buff_size"), 10, 64)
+	if tools.RemoteFiles[key].PieceSize > buffSize+100 { // Le 50 sert au format du message `data`
+		fmt.Printf("Impossible de télécharger \033[0;35m%s\033[0m. La taille des pièces est trop grosse.", p.Files[key].Name) // Normalement impossible d'arriver ici.
+		tools.WriteLog("Impossible de télécharger %s. La taille des pièces est trop grosse.", p.Files[key].Name)
+		return
+	}
 	mutex.Lock()
 	dl = true
 	mutex.Unlock()
 	time.Sleep(time.Second)
-	indexByConn := map[int][]net.Conn{} // All the indexes we don't have yet and the array of connections that have them.
-	connAsk := map[net.Conn][]string{}  // The indexes we'll ask from each connection.
-	var dontHave []int                  // To sort the wanted indexes by ascending order of number of peers having it.
+	indexByConn := map[uint64][]net.Conn{} // All the indexes we don't have yet and the array of connections that have them.
+	connAsk := map[net.Conn][]string{}     // The indexes we'll ask from each connection.
+	var dontHave []uint64                  // To sort the wanted indexes by ascending order of number of peers having it.
 	if _, valid := p.Files[key]; valid {
-
 		for index := range p.Files[key].Peers["self"].BufferMaps[key].Length {
 			if !tools.ByteArrayCheck(p.Files[key].Peers["self"].BufferMaps[key].BitSequence, index) { // Check which pieces are missing.
 				indexByConn[index] = []net.Conn{}
@@ -183,7 +188,6 @@ func (p *Peer) Downloading(key string) {
 	} else {
 		for i := range tools.BufferBitSize(*tools.RemoteFiles[key]) {
 			dontHave = append(dontHave, i)
-
 		}
 	}
 	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
@@ -195,8 +199,9 @@ func (p *Peer) Downloading(key string) {
 			WriteReadConnection(rconn, p, "interested "+key+"\n")
 		}
 		for index := range dontHave { // Get the list peers having a certain missing piece.
-			if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, index) {
-				indexByConn[index] = append(indexByConn[index], p.Comm[connRem])
+			uintindex := uint64(index)
+			if tools.ByteArrayCheck(tools.RemoteFiles[key].Peers[connRem].BufferMaps[key].BitSequence, uintindex) {
+				indexByConn[uintindex] = append(indexByConn[uintindex], p.Comm[connRem])
 			}
 		}
 	}
@@ -205,10 +210,11 @@ func (p *Peer) Downloading(key string) {
 	})
 
 	for index := range dontHave { // Try to share the work between peers for each wanted piece.
-		if len(indexByConn[index]) == 0 { // No peer has the piece.
+		uintindex := uint64(index)
+		if len(indexByConn[uintindex]) == 0 { // No peer has the piece.
 			continue
 		}
-		conns := indexByConn[index] // List of peers having the piece.
+		conns := indexByConn[uintindex] // List of peers having the piece.
 		requested := conns[0]
 		for _, conn := range conns[1:] {
 			if len(connAsk[conn]) > len(connAsk[requested]) {
@@ -223,7 +229,22 @@ func (p *Peer) Downloading(key string) {
 	}
 
 	for conn, indexes := range connAsk {
-		WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(indexes, " ")+"]\n")
+		var currSize uint64 = 0
+
+		var tmpIndexes []string
+
+		for index := range indexes {
+			tmpIndexes = append(tmpIndexes, strconv.Itoa(index))
+			currSize += p.Files[key].PieceSize
+			if currSize+100 >= buffSize {
+				WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
+				tmpIndexes = []string{}
+				currSize = 0
+			}
+		}
+		if len(tmpIndexes) != 0 {
+			WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
+		}
 	}
 }
 

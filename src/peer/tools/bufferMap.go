@@ -7,26 +7,26 @@ import (
 	"strconv"
 )
 
-func BitSize(size int, pieceSize int) int {
-	return int(math.Ceil(float64(size) / float64(pieceSize)))
+func BitSize(size uint64, pieceSize uint64) uint64 {
+	return uint64(math.Ceil(float64(size) / float64(pieceSize)))
 }
 
 // BufferBitSize returns the length of the bit sequence needed for the BufferMap of a File.
-func BufferBitSize(file File) int {
+func BufferBitSize(file File) uint64 {
 	return BitSize(file.Size, file.PieceSize)
 }
 
 // BufferSize returns the length of the array containing the bit sequence for the BufferMap of a File.
-func BufferSize(file File) int {
+func BufferSize(file File) uint64 {
 	return (file.Size-1)/file.PieceSize/8 + 1
 }
 
 // InitBufferMap helps to initialize a BufferMap of a File.
-func InitBufferMap(size int, pieceSize int) BufferMap {
+func InitBufferMap(size uint64, pieceSize uint64) BufferMap {
 	return BufferMap{Length: BitSize(size, pieceSize), BitSequence: make([]byte, (size-1)/pieceSize/8+1)}
 }
 
-func LenInitBufferMap(length int) BufferMap {
+func LenInitBufferMap(length uint64) BufferMap {
 	return BufferMap{Length: length, BitSequence: make([]byte, (length-1)/8+1)}
 }
 
@@ -41,17 +41,17 @@ func BitCount(buff BufferMap) int {
 }
 
 // ByteArrayWrite sets the bit at `index` position to 1.
-func ByteArrayWrite(array *[]byte, index int) {
+func ByteArrayWrite(array *[]byte, index uint64) {
 	(*array)[index/8] |= 1 << (7 - (index % 8))
 }
 
 // ByteArrayErase sets the bit at `index` position to 0.
-func ByteArrayErase(array *[]byte, index int) {
+func ByteArrayErase(array *[]byte, index uint64) {
 	(*array)[index/8] &= ^(1 << (7 - (index % 8)))
 }
 
 // ByteArrayCheck tells if the bit at `index` position is set to 1.
-func ByteArrayCheck(array []byte, index int) bool {
+func ByteArrayCheck(array []byte, index uint64) bool {
 	return array[index/8]&(1<<(7-index%8)) > 0
 }
 
@@ -67,12 +67,12 @@ func ArrayCheck(buff BufferMap) bool {
 }
 
 // BufferMapWrite uses ByteArrayWrite to write a 1 at the `index` position.
-func BufferMapWrite(bufferMap *BufferMap, index int) {
+func BufferMapWrite(bufferMap *BufferMap, index uint64) {
 	ByteArrayWrite(&(bufferMap.BitSequence), index)
 }
 
 // BufferMapErase uses ByteArrayErase to write a 0 at the `index` position.
-func BufferMapErase(bufferMap *BufferMap, index int) {
+func BufferMapErase(bufferMap *BufferMap, index uint64) {
 	ByteArrayErase(&(bufferMap.BitSequence), index)
 }
 
@@ -82,7 +82,7 @@ func BufferMapCopy(dst **BufferMap, src *BufferMap) {
 		*dst = &BufferMap{Length: src.Length, BitSequence: make([]byte, (src.Length-1)/8+1)}
 	}
 	//for i := range dst.Length { // TODO
-	for i := 0; i < (*dst).Length; i++ {
+	for i := range (*dst).Length {
 		if ByteArrayCheck(src.BitSequence, i) {
 			ByteArrayWrite(&((*dst).BitSequence), i)
 		} else {
@@ -96,10 +96,10 @@ func StringToBufferMap(str string) BufferMap {
 	array := make([]byte, (len(str)-1)/8+1)
 	for index, char := range str {
 		if char == '1' {
-			ByteArrayWrite(&array, index)
+			ByteArrayWrite(&array, uint64(index))
 		}
 	}
-	return BufferMap{Length: len(str), BitSequence: array}
+	return BufferMap{Length: uint64(len(str)), BitSequence: array} // len may not be able to return uint64 correctly
 }
 
 // StringToData transforms a string of `0` and `1` into a Data.
@@ -107,7 +107,7 @@ func StringToData(str string) Data {
 	array := make([]byte, (len(str)-1)/8+1)
 	for index, char := range str {
 		if char == '1' {
-			ByteArrayWrite(&array, index)
+			ByteArrayWrite(&array, uint64(index))
 		}
 	}
 	return Data{Length: len(str) / 8, BitSequence: array}

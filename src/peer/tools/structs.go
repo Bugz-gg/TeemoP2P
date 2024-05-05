@@ -3,15 +3,15 @@ package tools
 // File contains the basic data about a file.
 type File struct {
 	Name      string
-	Size      int
-	PieceSize int
+	Size      uint64
+	PieceSize uint64
 	Key       string
 	Peers     map[string]*Peer // Conn.Addr
 } //BufferMap BufferMap
 
 // Piece contains the data about a piece (the actual data).
 type Piece struct {
-	Index int
+	Index uint64
 	Data  Data
 }
 
@@ -67,7 +67,7 @@ type Peer struct {
 // BufferMap tells whether the peer has the pieces of a file.
 // The `Length` attribute is the length of the bit sequence, not of the `BitSequence` array, which is padded to the byte.
 type BufferMap struct {
-	Length      int
+	Length      uint64
 	BitSequence []byte
 }
 
@@ -151,7 +151,7 @@ func BufferMapCmp(bM1 BufferMap, bM2 BufferMap) bool {
 	if bM1.Length == 0 {
 		return true
 	}
-	for i := 0; i < bM1.Length/8; i++ {
+	for i := 0; uint64(i) < bM1.Length/8; i++ {
 		if bM1.BitSequence[i] != bM2.BitSequence[i] {
 			return false
 		}

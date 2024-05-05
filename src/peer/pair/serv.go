@@ -65,8 +65,8 @@ func worker(jobs chan Job, p *Peer) {
 				tools.WriteLog("Sending to %s:%s\n", conn.RemoteAddr().String(), buff)
 				_, err := conn.Write([]byte(buff))
 				errorCheck(err)
-				break
 			} else { // TODO : En faire une fonction
+				fmt.Println("Heheheha.")
 				attempts.Lock()
 				attempts.m[conn]--
 				attempt--
@@ -77,11 +77,15 @@ func worker(jobs chan Job, p *Peer) {
 			fmt.Println(conn.RemoteAddr().String(), ":", mess)
 			valid, data := tools.GetPiecesCheck(mess)
 			if valid {
-				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
-				errorCheck(err)
+				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_RDWR, os.FileMode(0777))
+				if err != nil {
+					errorCheck(err)
+					return
+				}
+
 				response := "data " + data.Key + " ["
 				for _, piece := range data.Pieces {
-					_, err := fdf.Seek(int64(piece*p.Files[data.Key].PieceSize), 0)
+					_, err := fdf.Seek(int64(uint64(piece)*p.Files[data.Key].PieceSize), 0)
 					errorCheck(err)
 					// tempBuff := make([]byte, p.Files[data.Key].PieceSize)
 					tempBuff := tools.BufferMap{Length: p.Files[data.Key].PieceSize * 8, BitSequence: make([]byte, p.Files[data.Key].PieceSize*8)}
@@ -96,7 +100,6 @@ func worker(jobs chan Job, p *Peer) {
 				fmt.Println(conn.LocalAddr().String(), ":", response)
 				_, err = conn.Write([]byte(response))
 				errorCheck(err)
-				break
 			} else {
 				attempts.Lock()
 				attempts.m[conn]--
@@ -238,7 +241,7 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 						var err error = nil
 						var n int
 						for len(data) == 0 || data[len(data)-1] != '\n' || err != nil {
-							conn.SetReadDeadline(time.Now().Add(time.Duration(float64(7) * math.Pow(10, 9))))
+							conn.SetReadDeadline(time.Now().Add(time.Duration(float64(10) * math.Pow(10, 9))))
 							fd, err = conn.Read(buf)
 							n += fd
 							// errorCheck(nerr)

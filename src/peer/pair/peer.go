@@ -36,10 +36,14 @@ func errorCheck(err error) {
 func GetConfig() Peer {
 	file, err := ini.Load("config.ini")
 	errorCheck(err)
+	if err != nil {
+		fmt.Printf("\033[0;31mYou have no config.ini !\033[0m\n")
+	}
 	var track Peer
 
 	section := file.Section("Tracker")
 	track.IP = section.Key("ip").String()
+	fmt.Println(track.IP)
 	track.Port = section.Key("port").String()
 	track.Status = "online"
 	track.Type = "tracker"
@@ -48,6 +52,7 @@ func GetConfig() Peer {
 
 func StartPeer(IP string, Port string, Type string) Peer {
 	track := GetConfig()
+	fmt.Println(track)
 	peer := Peer{
 		IP:    IP,
 		Port:  Port,

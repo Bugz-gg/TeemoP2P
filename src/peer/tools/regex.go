@@ -232,10 +232,10 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 			}
 		}
 		fmt.Printf("\033[0;34mWanted pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
-		for _, i := range pieces {
-			fmt.Printf("%d ", i)
-		}
-		fmt.Printf("\n")
+		// for _, i := range pieces {
+		// 	fmt.Printf("%d ", i)
+		// }
+		// fmt.Printf("\n")
 		return true, GetPiecesData{Key: match[1], Pieces: pieces}
 	}
 	return false, GetPiecesData{}

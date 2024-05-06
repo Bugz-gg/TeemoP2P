@@ -189,8 +189,25 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 			}
 		}
 
-		command := fmt.Sprintf("getpieces %s %v\n", selectedFile, pieces)
-		peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, command)
+		var currSize uint64 = 0
+		var tmpIndexes []string
+		buffSize, _ := strconv.ParseUint(tools.GetValueFromConfig("Peer", "max_buff_size"), 10, 64)
+
+		for index := range pieces {
+			tmpIndexes = append(tmpIndexes, strconv.Itoa(index))
+			currSize += MyPeer.Files[selectedFile].PieceSize
+			if currSize+100 >= buffSize {
+				peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, "getpieces "+selectedFile+" ["+strings.Join(tmpIndexes, " ")+"]\n")
+				tmpIndexes = []string{}
+				currSize = 0
+			}
+		}
+		if len(tmpIndexes) != 0 {
+			peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, "getpieces "+selectedFile+" ["+strings.Join(tmpIndexes, " ")+"]\n")
+		}
+
+		// command := fmt.Sprintf("getpieces %s %v\n", selectedFile, pieces)
+		// peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, command)
 
 	default:
 		fmt.Println("\u001B[91mInvalid command.\u001B[39m")

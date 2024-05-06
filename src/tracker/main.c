@@ -155,7 +155,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
       
             pthread_mutex_lock(&mutex_for_client_socket);
             if (client_socket[index] == client_sockfd) {
-              printf("(%d) [\033[0;33m%s:%d\033[39m] Client disconnected (\033[0;33m%s:%d\033[39m).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
+              printf("(%d) [\033[0;33m%s:%d\033[39m] \033[0;31mClient disconnected\033[0m (\033[0;33m%s:%d\033[39m).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
               write_log("(%d) [%s:%d] Client disconnected (%s:%d).\n", index, connected_peers[index]->addr_ip, connected_peers[index]->num_port, clientip, port);
               pthread_mutex_lock(&mutex_for_connected_peers);
               remove_peer_all_files(&tracker, connected_peers[index]);
@@ -299,7 +299,7 @@ int main() {
             }
 
             // Inform user of socket number - used in send and receive commands
-            printf("New connection, socket fd: %d, \033[0;33m%s:%d\033[39m.\033[39m \n", newsockfd,
+            printf("\033[0;32mNew connection\033[0m, socket fd: %d, \033[0;33m%s:%d\033[39m.\033[39m \n", newsockfd,
                    inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
             write_log("New connection: socket fd %d, %s:%d.\n", newsockfd,
                       inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));

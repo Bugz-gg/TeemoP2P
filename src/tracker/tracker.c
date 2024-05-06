@@ -342,7 +342,7 @@ void update(Tracker *t, updateData *d, int socket_fd, int index) {
             ++t->nb_files;
             max(&t->max_file_ind, t->nb_files);
         }
-        findings found_peer = find((void **) file->peers, file->max_peer_ind, &peer, *peer_cmp);
+        findings found_peer = find((void **) file->peers, file->max_peer_ind, peer, *peer_cmp);
         if (found_peer.found == NULL) {
             if (found_peer.index == t->nb_peers)
                 cond_realloc((void **) file->peers, &t->alloc_peers, t->nb_peers + 1, &peer);

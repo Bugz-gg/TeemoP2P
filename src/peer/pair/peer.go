@@ -43,7 +43,6 @@ func GetConfig() Peer {
 
 	section := file.Section("Tracker")
 	track.IP = section.Key("ip").String()
-	fmt.Println(track.IP)
 	track.Port = section.Key("port").String()
 	track.Status = "online"
 	track.Type = "tracker"
@@ -52,7 +51,6 @@ func GetConfig() Peer {
 
 func StartPeer(IP string, Port string, Type string) Peer {
 	track := GetConfig()
-	fmt.Println(track)
 	peer := Peer{
 		IP:    IP,
 		Port:  Port,
@@ -70,6 +68,6 @@ func StartPeer(IP string, Port string, Type string) Peer {
 	go peer.sendupdate()
 	time.Sleep(time.Millisecond)
 	peer.HelloTrack(track)
-	go peer.rarepiece()
+	//go peer.rarepiece()
 	return peer
 }

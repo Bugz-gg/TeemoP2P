@@ -59,6 +59,7 @@ func worker(jobs chan Job, p *Peer) {
 		case "interested":
 			valid, data := tools.InterestedCheck(mess)
 			if valid {
+				fmt.Println("Valid.")
 				file := p.Files[data.Key]
 				buff := "have " + data.Key + " " + tools.BufferMapToString(*file.Peers["self"].BufferMaps[data.Key]) + "\n"
 				// fmt.Printf("\033[0;35mSending to\u001B[39m [\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), buff)
@@ -66,7 +67,7 @@ func worker(jobs chan Job, p *Peer) {
 				_, err := conn.Write([]byte(buff))
 				errorCheck(err)
 			} else { // TODO : En faire une fonction
-				fmt.Println("Heheheha.")
+				fmt.Println("Bad attempt.")
 				attempts.Lock()
 				attempts.m[conn]--
 				attempt--
@@ -222,7 +223,6 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 		attempts.Unlock()
 
 		go func() {
-			defer conn.Close()
 			defer unix.EpollCtl(epfd, unix.EPOLL_CTL_DEL, fd, nil)
 
 			for {

@@ -450,7 +450,12 @@ func (p *Peer) interested(key string) {
 			}
 			k--
 		}
-		p.ConnectTo(randomPeer.IP, fmt.Sprint(randomPeer.Port), "interested "+key+"\n")
+		if _, valid := p.Comm[randomPeer.IP+":"+randomPeer.Port]; !valid {
+			p.ConnectTo(randomPeer.IP, fmt.Sprint(randomPeer.Port), "interested "+key+"\n")
+		} else {
+			WriteReadConnection(p.Comm[randomPeer.IP+":"+randomPeer.Port], p, "interested "+key+"\n")
+
+		}
 		it--
 	}
 }

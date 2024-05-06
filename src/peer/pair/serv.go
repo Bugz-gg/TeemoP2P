@@ -78,10 +78,9 @@ func worker(jobs chan Job, p *Peer) {
 			if valid {
 				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_RDWR, os.FileMode(0777))
 				if err != nil {
+					fdf, err = os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name, "/file"), os.O_RDWR, os.FileMode(0777))
 					errorCheck(err)
-					return
 				}
-
 				response := "data " + data.Key + " ["
 				for _, piece := range data.Pieces {
 					_, err := fdf.Seek(int64(uint64(piece)*p.Files[data.Key].PieceSize), 0)
@@ -173,7 +172,7 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 	}
 	defer unix.Close(epfd)
 
-	var events [8192]unix.EpollEvent
+	var events [1024]unix.EpollEvent
 
 	max_concurrence, err := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_concurrency"))
 	errorCheck(err)
@@ -238,7 +237,7 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 						var err error = nil
 						var n int
 						for len(data) == 0 || data[len(data)-1] != '\n' || err != nil {
-							conn.SetReadDeadline(time.Now().Add(time.Duration(float64(10) * math.Pow(10, 9))))
+							conn.SetReadDeadline(time.Now().Add(time.Duration(float64(100) * math.Pow(10, 9))))
 							fd, err = conn.Read(buf)
 							n += fd
 							// errorCheck(nerr)
@@ -247,15 +246,6 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 						conn.SetReadDeadline(time.Time{})
 						jobs <- Job{conn, data}
 					}
-					// 	data := make([]byte, 32768)
-					// 	_, err := conn.Read(data)
-					// 	if err != nil {
-					// 		fmt.Println("Read error:", err)
-					// 		return
-					// 	}
-					//
-					// 	jobs <- Job{conn, data}
-					// }
 				}
 			}
 		}()

@@ -240,21 +240,23 @@ func (p *Peer) Downloading(key string) {
 	}
 
 	for conn, indexes := range connAsk {
-		var currSize uint64 = 0
-		var tmpIndexes []string
+		go func() {
+			var currSize uint64 = 0
+			var tmpIndexes []string
 
-		for index := range indexes {
-			tmpIndexes = append(tmpIndexes, strconv.Itoa(index))
-			currSize += p.Files[key].PieceSize
-			if currSize+100 >= buffSize {
-				WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
-				tmpIndexes = []string{}
-				currSize = 0
+			for index := range indexes {
+				tmpIndexes = append(tmpIndexes, strconv.Itoa(index))
+				currSize += p.Files[key].PieceSize
+				if currSize+100 >= buffSize {
+					WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
+					tmpIndexes = []string{}
+					currSize = 0
+				}
 			}
-		}
-		if len(tmpIndexes) != 0 {
-			WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
-		}
+			if len(tmpIndexes) != 0 {
+				WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
+			}
+		}()
 	}
 	fmt.Println("\u001B[92mDONE\u001B[39m")
 }

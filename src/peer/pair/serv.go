@@ -173,7 +173,7 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 	}
 	defer unix.Close(epfd)
 
-	var events [128]unix.EpollEvent
+	var events [8192]unix.EpollEvent
 
 	max_concurrence, err := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_concurrency"))
 	errorCheck(err)
@@ -245,7 +245,6 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 							data += string(buf[:fd])
 						}
 						conn.SetReadDeadline(time.Time{})
-						fmt.Println(string(data))
 						jobs <- Job{conn, data}
 					}
 					// 	data := make([]byte, 32768)

@@ -190,7 +190,6 @@ func (p *Peer) Downloading(key string) {
 		}
 	}
 	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
-	fmt.Println(tools.RemoteFiles[key].Peers)
 	for connRem := range tools.RemoteFiles[key].Peers {
 		if rconn, valid := p.Comm[connRem]; !valid {
 			p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
@@ -204,6 +203,19 @@ func (p *Peer) Downloading(key string) {
 			}
 		}
 	}
+	go func() { // Maybe just maybe can improve this but its ok for now or Im sure now
+		currPercent := int(float64(tools.BitCount(*p.Files[key].Peers["self"].BufferMaps[key])) * 100 / float64(tools.BufferBitSize(*p.Files[key])))
+		str := "▌"
+		// str2 := "|"
+		fmt.Print(strings.Repeat(str, currPercent/10))
+		for !tools.ArrayCheck(*p.Files[key].Peers["self"].BufferMaps[key]) {
+			newPercent := int(float64(tools.BitCount(*p.Files[key].Peers["self"].BufferMaps[key])) * 100 / float64(tools.BufferBitSize(*p.Files[key])))
+			fmt.Print(strings.Repeat(str, (int(newPercent)/10)-(currPercent/10)))
+			currPercent = newPercent
+		}
+		newPercent := int(float64(tools.BitCount(*p.Files[key].Peers["self"].BufferMaps[key])) * 100 / float64(tools.BufferBitSize(*p.Files[key])))
+		fmt.Println(strings.Repeat(str, (int(newPercent)/10)-(currPercent/10)))
+	}()
 	sort.SliceStable(dontHave, func(i, j int) bool { // Sort by ascending order of number of peers.
 		return len(indexByConn[dontHave[i]]) < len(indexByConn[dontHave[j]])
 	})
@@ -244,6 +256,7 @@ func (p *Peer) Downloading(key string) {
 			WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
 		}
 	}
+	fmt.Println("\u001B[92mDONE\u001B[39m")
 }
 
 // TODO : Remote file stockage lors d une demande au tracker

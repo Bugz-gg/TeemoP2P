@@ -59,7 +59,6 @@ func worker(jobs chan Job, p *Peer) {
 		case "interested":
 			valid, data := tools.InterestedCheck(mess)
 			if valid {
-				fmt.Println("Valid.")
 				file := p.Files[data.Key]
 				buff := "have " + data.Key + " " + tools.BufferMapToString(*file.Peers["self"].BufferMaps[data.Key]) + "\n"
 				// fmt.Printf("\033[0;35mSending to\u001B[39m [\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), buff)
@@ -67,7 +66,6 @@ func worker(jobs chan Job, p *Peer) {
 				_, err := conn.Write([]byte(buff))
 				errorCheck(err)
 			} else { // TODO : En faire une fonction
-				fmt.Println("Bad attempt.")
 				attempts.Lock()
 				attempts.m[conn]--
 				attempt--
@@ -75,7 +73,7 @@ func worker(jobs chan Job, p *Peer) {
 				checkAttempts(conn, attempt)
 			}
 		case "getpieces":
-			fmt.Println(conn.RemoteAddr().String(), ":", mess)
+			//fmt.Println(conn.RemoteAddr().String(), ":", mess)
 			valid, data := tools.GetPiecesCheck(mess)
 			if valid {
 				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_RDWR, os.FileMode(0777))
@@ -96,9 +94,8 @@ func worker(jobs chan Job, p *Peer) {
 					// fdf.Read(tempBuff)
 					// response += strconv.Itoa(piece) + ":" + string(tempBuff) + " "
 				}
-				response = strings.TrimSuffix(response, " ")
-				response += "]\n"
-				fmt.Println(conn.LocalAddr().String(), ":", response)
+				response = strings.TrimSuffix(response, " ") + "]\n"
+				//fmt.Println(conn.LocalAddr().String(), ":", response)
 				_, err = conn.Write([]byte(response))
 				errorCheck(err)
 			} else {

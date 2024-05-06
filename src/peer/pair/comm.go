@@ -192,12 +192,9 @@ func (p *Peer) Downloading(key string) {
 	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
 	fmt.Println(tools.RemoteFiles[key].Peers)
 	for connRem := range tools.RemoteFiles[key].Peers {
-		fmt.Println("IOPIOPIOP")
 		if rconn, valid := p.Comm[connRem]; !valid {
-			fmt.Println("if")
 			p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
 		} else {
-			fmt.Println("else")
 			WriteReadConnection(rconn, p, "interested "+key+"\n")
 		}
 		for index := range dontHave { // Get the list peers having a certain missing piece.
@@ -207,7 +204,6 @@ func (p *Peer) Downloading(key string) {
 			}
 		}
 	}
-	fmt.Println("Here")
 	sort.SliceStable(dontHave, func(i, j int) bool { // Sort by ascending order of number of peers.
 		return len(indexByConn[dontHave[i]]) < len(indexByConn[dontHave[j]])
 	})
@@ -230,34 +226,21 @@ func (p *Peer) Downloading(key string) {
 		}
 		connAsk[requested] = append(connAsk[requested], strconv.Itoa(index))
 	}
-	fmt.Println("Here2")
 
 	for conn, indexes := range connAsk {
-		fmt.Println("Here3")
 		var currSize uint64 = 0
-		fmt.Println("Here4")
 		var tmpIndexes []string
-		fmt.Println("Here5")
 
 		for index := range indexes {
-			fmt.Println("Here6")
 			tmpIndexes = append(tmpIndexes, strconv.Itoa(index))
-			fmt.Println("Here7")
 			currSize += p.Files[key].PieceSize
-			fmt.Println("Here8")
 			if currSize+100 >= buffSize {
-				fmt.Println("Here9")
 				WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
-				fmt.Println("Here10")
 				tmpIndexes = []string{}
-				fmt.Println("Here11")
 				currSize = 0
-				fmt.Println("Here12")
 			}
 		}
-		fmt.Println("Here13")
 		if len(tmpIndexes) != 0 {
-			fmt.Println("Here14")
 			WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
 		}
 	}

@@ -311,7 +311,13 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				file := p.Files[data.Key]
 				fdf, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
 				errorCheck(err)
-				fdc, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/manifest"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0777))
+				fdc, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/manifest"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
+				errorCheck(err)
+				fdc.Seek(0, 0)
+				_, _ = fdc.WriteString(p.Files[data.Key].Name + "\n")
+				_, _ = fdc.WriteString(strconv.FormatUint(p.Files[data.Key].Size, 10) + "\n")
+				_, _ = fdc.WriteString(strconv.FormatUint(p.Files[data.Key].PieceSize, 10) + "\n")
+				_, err = fdc.WriteString(p.Files[data.Key].Key + "\n")
 				errorCheck(err)
 				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)
@@ -328,10 +334,10 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					if n <= 0 {
 						fmt.Println("File has not being written. :(", err, data.Pieces[i].Data.BitSequence)
 					}
-					_, err = fdc.WriteString("\n" + time.Now().String() + "Downloading the " + fmt.Sprint(data.Pieces[i].Index) + " piece.")
-					errorCheck(err)
 					tools.ByteArrayWrite(&file.Peers[conn.LocalAddr().String()].BufferMaps[data.Key].BitSequence, data.Pieces[i].Index)
 				}
+				_, err = fdc.WriteString(tools.BufferMapToString(*file.Peers[conn.LocalAddr().String()].BufferMaps[data.Key]) + "\n")
+				errorCheck(err)
 				if hash := tools.GetMD5Hash(filepath.Join(path, p.Files[data.Key].Name+"/file")); hash == data.Key {
 					err = os.Rename(filepath.Join("./", path, p.Files[data.Key].Name), filepath.Join(path, "todelete"))
 					errorCheck(err)

@@ -1,13 +1,15 @@
 package tools
 
 import (
+	"bufio"
 	"crypto/md5"
 	"encoding/hex"
-	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
+
+	"gopkg.in/ini.v1"
 )
 
 var config map[string]map[string]string
@@ -33,7 +35,7 @@ func searchFiles(path string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && info.Name() != "file" && info.Name() != "manifest" {
+		if !info.IsDir() && info.Name() != "file" {
 			files = append(files, filePath)
 		}
 		return nil
@@ -48,6 +50,42 @@ func fillStruct(files []string, conn string) map[string]*File {
 	result := make(map[string]*File)
 	bufferMaps := make(map[string]*BufferMap)
 	for _, filePath := range files {
+		if filePath == "manifest" {
+			fd, _ := os.OpenFile(filePath, os.O_RDWR, os.FileMode(0777))
+			rd := bufio.NewReader(fd)
+			tempTab := []string{"Name", "Size", "PieceSize", "Key"}
+			tempMap := make(map[string]string, 4)
+			for _, i := range tempTab {
+				txt, _ := rd.ReadBytes('\n')
+				tempMap[i] = string(txt)
+
+			}
+			sz, _ := strconv.ParseUint(tempMap["Size"], 10, 64)
+			psz, _ := strconv.ParseUint(tempMap["PieceSize"], 10, 64)
+			fil := File{
+				Name:      tempMap["Name"],
+				Size:      sz,
+				PieceSize: psz,
+				Key:       tempMap["Key"],
+			}
+
+			txt, _ := rd.ReadBytes('\n')
+			buff := string(txt)
+			buffermap := StringToBufferMap(buff)
+			bufferMaps[fil.Key] = &buffermap
+			if fil.Peers == nil {
+				fil.Peers = make(map[string]*Peer)
+			}
+			fil.Peers["self"] = &Peer{
+				IP:         "",
+				Port:       "",
+				BufferMaps: bufferMaps,
+			}
+			fil.Peers[conn] = fil.Peers["self"]
+			result[fil.Key] = &fil
+			continue
+
+		}
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
 			return nil

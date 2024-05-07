@@ -225,6 +225,10 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 			for {
 				nevents, err := unix.EpollWait(epfd, events[:], -1)
 				if err != nil {
+					if err == unix.EINTR {
+						// System call was interrupted, retry
+						continue
+					}
 					fmt.Println("EpollWait error:", err)
 					return
 				}

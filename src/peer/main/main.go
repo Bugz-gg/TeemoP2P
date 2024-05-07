@@ -95,7 +95,7 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 			fmt.Printf("(%d) %s %s\n", i, file.Name, key)
 		}
 
-		fmt.Print("Selection: ")
+		fmt.Print("\u001B[92mSelection:\u001B[39m ")
 		input := readInput()
 		fileNum, err := strconv.Atoi(input)
 		if err != nil || fileNum < 0 || fileNum >= len(remoteFileKeys) {
@@ -219,8 +219,8 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 func inputProg() {
 	//var MyPeer peer.Peer
 	fmt.Println("\u001B[92mWelcome to Teemo2P!\u001B[39m")
-
 	for {
+
 		fmt.Print("\u001B[92mEnter a command:\u001B[39m ")
 		command := readInput()
 		switch command {

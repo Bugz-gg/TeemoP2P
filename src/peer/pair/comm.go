@@ -191,6 +191,9 @@ func (p *Peer) Downloading(key string) {
 	}
 	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
 	for connRem := range tools.RemoteFiles[key].Peers {
+		if tools.RemoteFiles[key].Peers[connRem].IP == p.IP && tools.RemoteFiles[key].Peers[connRem].Port != p.Port { // No need to ask pieces from ourselves
+			continue
+		}
 		if rconn, valid := p.Comm[connRem]; !valid {
 			p.ConnectTo(tools.RemoteFiles[key].Peers[connRem].IP, tools.RemoteFiles[key].Peers[connRem].Port, "interested "+key+"\n")
 		} else {

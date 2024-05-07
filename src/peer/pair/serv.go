@@ -78,6 +78,7 @@ func worker(jobs chan Job, p *Peer) {
 			if valid {
 				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_RDWR, os.FileMode(0777))
 				if err != nil {
+					errorCheck(err)
 					fdf, err = os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name, "/file"), os.O_RDWR, os.FileMode(0777))
 					errorCheck(err)
 				}

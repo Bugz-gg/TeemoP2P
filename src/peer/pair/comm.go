@@ -303,9 +303,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 			valid, data := tools.DataCheck(mess)
 			if valid {
 				path := tools.GetValueFromConfig("Peer", "path")
-				if path == "" {
-					path = "share"
-				}
+
 				os.MkdirAll(filepath.Join("./", path, "/", p.Files[data.Key].Name), os.FileMode(0777))
 				file := p.Files[data.Key]
 				fdf, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))

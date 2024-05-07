@@ -14,6 +14,8 @@ import (
 	tools "peerproject/tools"
 )
 
+var MyPeer peer.Peer
+
 func sleep() {
 	time.Sleep(time.Second)
 }
@@ -215,7 +217,7 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 }
 
 func inputProg() {
-	var MyPeer peer.Peer
+	//var MyPeer peer.Peer
 	fmt.Println("\u001B[92mWelcome to Teemo2P!\u001B[39m")
 
 	for {
@@ -304,6 +306,9 @@ func main() {
 	go func() {
 		for {
 			s := <-sigchnl
+			for key := range MyPeer.Comm {
+				MyPeer.Close(key)
+			}
 			fmt.Println("Received :", s, ". Please exit the code properly by typing exit :)")
 			os.Exit(1)
 		}

@@ -154,7 +154,7 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 	l, err := net.Listen("tcp", p.IP+":"+p.Port)
 	for err != nil {
 		fmt.Println("Listen error:", err)
-		fmt.Println("Please choose an other port this one is already bind :")
+		fmt.Println("Please choose an other port. This one is already binded :")
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
 		text = strings.TrimSpace(text)

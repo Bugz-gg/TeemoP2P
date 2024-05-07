@@ -191,7 +191,7 @@ func (p *Peer) Downloading(key string) {
 	}
 	WriteReadConnection(p.Comm["tracker"], p, "getfile "+key+"\n") // Update the peers having the file.
 	for connRem := range tools.RemoteFiles[key].Peers {
-		if tools.RemoteFiles[key].Peers[connRem].IP == p.IP && tools.RemoteFiles[key].Peers[connRem].Port != p.Port { // No need to ask pieces from ourselves
+		if tools.RemoteFiles[key].Peers[connRem].IP == p.IP && tools.RemoteFiles[key].Peers[connRem].Port == p.Port { // No need to ask pieces from ourselves
 			continue
 		}
 		if rconn, valid := p.Comm[connRem]; !valid {
@@ -424,7 +424,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				tools.WriteLog("\u001B[92mInvalid list response.\u001B[39m\n")
 			}
 		case "peers":
-			valid := tools.PeersCheck(mess)
+			valid := tools.PeersCheck(mess, p.IP+":"+p.Port)
 			if valid {
 				key := strings.Split(mess, " ")[1]
 				mutex.Lock()

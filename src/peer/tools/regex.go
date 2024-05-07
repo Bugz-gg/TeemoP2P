@@ -291,7 +291,7 @@ func DataCheck(message string) (bool, DataData) {
 }
 
 // PeersCheck checks the format of a `peers` message. The boolean tells whether the format is valid or not. The returned struct's validity depends on the boolean.
-func PeersCheck(message string) bool {
+func PeersCheck(message string, selfIPPort string) bool {
 	if match := PeersRegex().FindStringSubmatch(message); match != nil {
 		buffer := match[2]
 		if len(buffer) == 0 {
@@ -312,6 +312,9 @@ func PeersCheck(message string) bool {
 		fmt.Printf("Listed peers:\n")
 		// Check if peer already registered
 		for _, data := range peersdata {
+			if data == selfIPPort {
+				continue
+			}
 			info := strings.Split(data, ":")
 			port := info[1]
 			peerId := fmt.Sprintf("%s:%s", info[0], port)
@@ -322,7 +325,6 @@ func PeersCheck(message string) bool {
 				RemoteFiles[match[1]].Peers[peerId] = AllPeers[peerId]
 			}
 			fmt.Printf("\033[0;34m%s:%s\033[39m\n", info[0], info[1])
-
 			peers[peerId] = AllPeers[peerId] // Add peer to list of peers having the file.
 		}
 		return true

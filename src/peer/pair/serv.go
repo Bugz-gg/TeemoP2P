@@ -53,7 +53,7 @@ func worker(jobs chan Job, p *Peer) {
 		input := strings.Split(mess, " ")[0]
 
 		// fmt.Printf("[\u001B[0;33m%s\u001B[39m]: %s\n", conn.RemoteAddr().String(), mess)
-		tools.WriteLog("[%s]: %s\n", conn.RemoteAddr().String(), mess)
+		//tools.WriteLog("[%s]: %s\n", conn.RemoteAddr().String(), mess)
 
 		switch input {
 		case "interested":
@@ -62,7 +62,7 @@ func worker(jobs chan Job, p *Peer) {
 				file := p.Files[data.Key]
 				buff := "have " + data.Key + " " + tools.BufferMapToString(*file.Peers["self"].BufferMaps[data.Key]) + "\n"
 				// fmt.Printf("\033[0;35mSending to\u001B[39m [\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), buff)
-				tools.WriteLog("Sending to %s:%s\n", conn.RemoteAddr().String(), buff)
+				tools.WriteLog("Sending to %s:%s our buffer map for %s\n", conn.RemoteAddr().String(), file.Name)
 				_, err := conn.Write([]byte(buff))
 				errorCheck(err)
 			} else { // TODO : En faire une fonction
@@ -238,7 +238,8 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 						return
 					} else if (events[ev].Events & unix.EPOLLIN) != 0 {
 						var data string
-						buf := make([]byte, 32768)
+						buffSize, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_buff_size"))
+						buf := make([]byte, buffSize)
 						var err error = nil
 						var n int
 						for len(data) == 0 || data[len(data)-1] != '\n' || err != nil {

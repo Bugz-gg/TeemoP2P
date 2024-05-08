@@ -3,6 +3,7 @@ package peer_package
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"net"
@@ -13,13 +14,39 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 var mutex sync.Mutex
 var previousMessage string // To know if it was an interested or a have.<ScrollWheelDown>
 var rare = false
-var dl bool
+var dl = false
+
+var DlDone chan struct{}
+var ResponsesRemainingUpdated chan struct{}
+var ResponsesRemaining atomic.Int64
+
+func WaitFor(sig chan struct{}, timeout bool) bool {
+	var timer <-chan time.Time
+	if timeout {
+		<-ResponsesRemainingUpdated
+		timePerMessage, _ := strconv.ParseInt(tools.GetValueFromConfig("Peer", "response_timeout"), 10, 64)
+		timer = time.After(time.Duration(ResponsesRemaining.Load()*timePerMessage) * time.Second)
+	}
+
+	select {
+	case <-sig:
+		return true
+	case <-timer:
+		return false
+	}
+}
+
+func ChannSignal(sig *chan struct{}) {
+	*sig <- struct{}{}
+	*sig = make(chan struct{})
+}
 
 func (p *Peer) HelloTrack(t Peer) {
 	timeout, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "timeout"))
@@ -38,7 +65,7 @@ func (p *Peer) HelloTrack(t Peer) {
 	// defer conn.Close()
 	_, err = conn.Write([]byte(message))
 	errorCheck(err)
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 1024) // 3 would be sufficient.
 	err = conn.SetReadDeadline(time.Now().Add(time.Duration(float64(timeout) * math.Pow(10, 9))))
 	errorCheck(err)
 	n, err := conn.Read(buffer)
@@ -206,19 +233,7 @@ func (p *Peer) Downloading(key string) {
 			}
 		}
 	}
-	go func() { // Maybe just maybe can improve this but its ok for now or Im sure now
-		currPercent := int(float64(tools.BitCount(*p.Files[key].Peers["self"].BufferMaps[key])) * 100 / float64(tools.BufferBitSize(*p.Files[key])))
-		str := "▌"
-		// str2 := "|"
-		fmt.Print(strings.Repeat(str, currPercent/10))
-		for !tools.ArrayCheck(*p.Files[key].Peers["self"].BufferMaps[key]) {
-			newPercent := int(float64(tools.BitCount(*p.Files[key].Peers["self"].BufferMaps[key])) * 100 / float64(tools.BufferBitSize(*p.Files[key])))
-			fmt.Print(strings.Repeat(str, (int(newPercent)/10)-(currPercent/10)))
-			currPercent = newPercent
-		}
-		newPercent := int(float64(tools.BitCount(*p.Files[key].Peers["self"].BufferMaps[key])) * 100 / float64(tools.BufferBitSize(*p.Files[key])))
-		fmt.Println(strings.Repeat(str, (int(newPercent)/10)-(currPercent/10)))
-	}()
+
 	sort.SliceStable(dontHave, func(i, j int) bool { // Sort by ascending order of number of peers.
 		return len(indexByConn[dontHave[i]]) < len(indexByConn[dontHave[j]])
 	})
@@ -242,26 +257,35 @@ func (p *Peer) Downloading(key string) {
 		connAsk[requested] = append(connAsk[requested], strconv.Itoa(index))
 	}
 
+	var nbPieces = int64((buffSize - 100) / p.Files[key].PieceSize)
+	for _, indexes := range connAsk {
+		pieces := int64(len(indexes))
+		ResponsesRemaining.Add((pieces + nbPieces - 1) / nbPieces)
+		ChannSignal(&ResponsesRemainingUpdated)
+	}
 	for conn, indexes := range connAsk {
 		go func() {
-			var currSize uint64 = 0
-			var tmpIndexes []string
-
-			for index := range indexes {
-				tmpIndexes = append(tmpIndexes, strconv.Itoa(index))
-				currSize += p.Files[key].PieceSize
-				if currSize+100 >= buffSize {
-					WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
-					tmpIndexes = []string{}
-					currSize = 0
-				}
-			}
-			if len(tmpIndexes) != 0 {
-				WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(tmpIndexes, " ")+"]\n")
+			var i int64 = 0
+			for ; i < int64(len(indexes)); i += nbPieces {
+				WriteReadConnection(conn, p, "getpieces "+key+" ["+strings.Join(indexes[i:min(len(indexes), int(i+nbPieces))], " ")+"]\n")
 			}
 		}()
 	}
-	fmt.Println("\u001B[92mDONE\u001B[39m")
+	bufferSize := float64(tools.BufferBitSize(*p.Files[key]))
+	bufferMap := *p.Files[key].Peers["self"].BufferMaps[key]
+	go func() { // Maybe just maybe can improve this but it's ok for now or I'm sure now
+		currPercent := int(float64(tools.BitCount(bufferMap)) * 100 / bufferSize)
+		str := "▌"
+		fmt.Print(strings.Repeat(str, currPercent/10))
+		for !tools.ArrayCheck(*p.Files[key].Peers["self"].BufferMaps[key]) {
+			newPercent := int(float64(tools.BitCount(bufferMap)) * 100 / bufferSize)
+			fmt.Print(strings.Repeat(str, (int(newPercent)/10)-(currPercent/10)))
+			currPercent = newPercent
+		}
+		newPercent := int(float64(tools.BitCount(bufferMap)) * 100 / bufferSize)
+		fmt.Println(strings.Repeat(str, (int(newPercent)/10)-(currPercent/10)))
+	}()
+	WaitFor(DlDone, true)
 }
 
 // TODO : Remote file stockage lors d une demande au tracker
@@ -281,8 +305,8 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 		os.Exit(1)
 	}
 	conn.Write([]byte(message))
-
-	buffer := make([]byte, 65536)
+	buffSize, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "max_buff_size"))
+	buffer := make([]byte, buffSize)
 	var eom string
 	var n int
 	var nerr error = nil
@@ -300,7 +324,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 		mess = strings.TrimSuffix(mess, "\n")
 		input := strings.Split(mess, " ")[0]
 		// fmt.Printf("[\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), mess)
-		tools.WriteLog("%s:%s\n", conn.RemoteAddr().String(), mess)
+		//tools.WriteLog("%s:%s\n", conn.RemoteAddr().String(), mess)
 		switch input {
 		case "data":
 			valid, data := tools.DataCheck(mess)
@@ -309,15 +333,16 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 
 				os.MkdirAll(filepath.Join("./", path, "/", p.Files[data.Key].Name), os.FileMode(0777))
 				file := p.Files[data.Key]
-				fdf, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
+				fdf, err := os.OpenFile(filepath.Join("./", path, file.Name+"/file"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
 				errorCheck(err)
-				fdc, err := os.OpenFile(filepath.Join("./", path, p.Files[data.Key].Name+"/manifest"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
+				fdc, err := os.OpenFile(filepath.Join("./", path, file.Name+"/manifest"), os.O_CREATE|os.O_RDWR, os.FileMode(0777))
 				errorCheck(err)
 				fdc.Seek(0, 0)
-				_, _ = fdc.WriteString(p.Files[data.Key].Name + "\n")
-				_, _ = fdc.WriteString(strconv.FormatUint(p.Files[data.Key].Size, 10) + "\n")
-				_, _ = fdc.WriteString(strconv.FormatUint(p.Files[data.Key].PieceSize, 10) + "\n")
-				_, err = fdc.WriteString(p.Files[data.Key].Key + "\n")
+				_, _ = fdc.WriteString(file.Name + "\n")
+				_, _ = fdc.WriteString(strconv.FormatUint(file.Size, 10) + "\n")
+				_, _ = fdc.WriteString(strconv.FormatUint(file.PieceSize, 10) + "\n")
+				_, err = fdc.WriteString(file.Key + "\n")
+				bufferMapOffset, _ := fdc.Seek(0, io.SeekCurrent)
 				errorCheck(err)
 				for i := 0; len(data.Pieces) > i; i++ {
 					_, err := fdf.Seek(int64(data.Pieces[i].Index*file.PieceSize), 0)
@@ -334,24 +359,39 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					if n <= 0 {
 						fmt.Println("File has not being written. :(", err, data.Pieces[i].Data.BitSequence)
 					}
-					tools.ByteArrayWrite(&file.Peers[conn.LocalAddr().String()].BufferMaps[data.Key].BitSequence, data.Pieces[i].Index)
+					tools.ByteArrayWrite(&file.Peers["self"].BufferMaps[data.Key].BitSequence, data.Pieces[i].Index)
 				}
-				_, err = fdc.WriteString(tools.BufferMapToString(*file.Peers[conn.LocalAddr().String()].BufferMaps[data.Key]) + "\n")
-				errorCheck(err)
-				if hash := tools.GetMD5Hash(filepath.Join(path, p.Files[data.Key].Name+"/file")); hash == data.Key {
-					err = os.Rename(filepath.Join("./", path, p.Files[data.Key].Name), filepath.Join(path, "todelete"))
-					errorCheck(err)
-					err = os.Rename(filepath.Join("./", path, "todelete", "/file"), filepath.Join(path, p.Files[data.Key].Name))
-					errorCheck(err)
+				//_, err = fdc.WriteString(tools.BufferMapToString(*file.Peers["self"].BufferMaps[data.Key]) + "\n")
 
-					err = os.RemoveAll(filepath.Join(path, "todelete"))
-					errorCheck(err)
+				for _, piece := range data.Pieces {
+					fdc.Seek(bufferMapOffset+int64(piece.Index), io.SeekStart)
+					_, _ = fdc.WriteString("1")
 				}
-
+				fdc.Seek(bufferMapOffset+int64(tools.BufferBitSize(*file)), io.SeekStart)
+				_, _ = fdc.WriteString("\n")
 				fdf.Close()
 				fdc.Close()
+
+				errorCheck(err)
+				if hash := tools.GetMD5Hash(filepath.Join(path, file.Name+"/file")); hash == data.Key {
+					err = os.Rename(filepath.Join("./", path, file.Name), filepath.Join(path, "todelete"+file.Key))
+					errorCheck(err)
+					err = os.Rename(filepath.Join("./", path, "todelete"+file.Key, "/file"), filepath.Join(path, file.Name))
+					errorCheck(err)
+
+					err = os.RemoveAll(filepath.Join(path, "todelete"+file.Key))
+					errorCheck(err)
+					tools.AddFile(tools.LocalFiles, file)
+					tools.RemoveFile(&tools.RemoteFiles, file)
+					fmt.Printf("\u001B[92m%s [%s] Download complete\u001B[39m\n", file.Name, file.Key)
+				}
+
+				resp := ResponsesRemaining.Add(-1)
+				if resp < 1 {
+					ChannSignal(&DlDone)
+				}
 			} else {
-				fmt.Println("\u001B[92mInvalid data response.\u001B[39m")
+				fmt.Printf("\u001B[92mInvalid data response.\u001B[39m: %s\n", mess)
 				tools.WriteLog("\u001B[92mInvalid data response.\u001B[39m\n")
 			}
 		case "have":
@@ -412,7 +452,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 				}
 
 			} else {
-				fmt.Println("\u001B[92mInvalid have response.\u001B[39m")
+				fmt.Printf("\u001B[92mInvalid have response.\u001B[39m: %s\n\n", mess)
 				tools.WriteLog("\u001B[92mInvalid have response.\u001B[39m\n")
 			}
 		case "OK":
@@ -420,7 +460,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 		case "list":
 			valid, _ := tools.ListCheck(mess)
 			if !valid {
-				fmt.Println("\u001B[92mInvalid list response.\u001B[39m")
+				fmt.Printf("\u001B[92mInvalid list response.\u001B[39m: %s\n", mess)
 				tools.WriteLog("\u001B[92mInvalid list response.\u001B[39m\n")
 			}
 		case "peers":
@@ -434,7 +474,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 					p.interested(key)
 				}
 			} else {
-				fmt.Println("\u001B[92mInvalid peers response.\u001B[39m")
+				fmt.Printf("\u001B[92mInvalid peers response.\u001B[39m%s\n", mess)
 				tools.WriteLog("\u001B[92mInvalid peers response.\u001B[39m\n")
 			}
 		case "\u001B[92mInvalid command you have no tries remaining, connection is closed...\u001B[39m":
@@ -470,15 +510,13 @@ func (p *Peer) interested(key string) {
 }
 func (p *Peer) progression(key string, conn net.Conn) {
 	i, _ := strconv.Atoi(tools.GetValueFromConfig("Peer", "progress_value"))
-	for {
-		mutex.Lock()
-		previousMessage = "have"
-		mutex.Unlock()
-		if file, valid := p.Files["self"]; valid {
-			length := tools.BitCount(*file.Peers[conn.LocalAddr().String()].BufferMaps[key])
-			if length >= i && length%i == 0 {
-				WriteReadConnection(conn, p, "have "+key+" "+tools.BufferMapToString(*file.Peers[conn.LocalAddr().String()].BufferMaps[key])+"\n")
-			}
+	mutex.Lock()
+	previousMessage = "have"
+	mutex.Unlock()
+	if file, valid := p.Files["self"]; valid {
+		length := tools.BitCount(*file.Peers[conn.LocalAddr().String()].BufferMaps[key])
+		if length >= i && length%i == 0 {
+			WriteReadConnection(conn, p, "have "+key+" "+tools.BufferMapToString(*file.Peers[conn.LocalAddr().String()].BufferMaps[key])+"\n")
 		}
 	}
 }

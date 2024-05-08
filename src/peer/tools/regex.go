@@ -24,7 +24,7 @@ func AddFile(fileMap *map[string]*File, file *File) {
 }
 
 // RemoveFile removes a file from a map.  (LocalFiles and RemoteFiles in this project.)
-func RemoveFile(fileMap *map[string]*File, file File) {
+func RemoveFile(fileMap *map[string]*File, file *File) {
 	delete(*fileMap, file.Key)
 }
 
@@ -138,11 +138,26 @@ func ListCheck(message string) (bool, ListData) {
 				fmt.Println("Invalid key.", err, err2)
 				return false, ListData{}
 			}
+			pass := false
+			for _, file := range *LocalFiles {
+				if key == file.Key {
+					pass = true
+				}
+			}
+			if pass {
+				continue
+			}
 
 			dupCount := 0
 			for {
 				index := 0
 				for _, file := range RemoteFiles {
+					if file.Name == filename && key != file.Key {
+						break
+					}
+					index++
+				}
+				for _, file := range *LocalFiles {
 					if file.Name == filename && key != file.Key {
 						break
 					}
@@ -167,8 +182,11 @@ func ListCheck(message string) (bool, ListData) {
 			//RemoteFiles[key] = &file
 		}
 		fmt.Printf("Listed files:\n")
+		WriteLog("Listed files:\n")
 		for _, file := range listStruct.Files {
 			fmt.Printf("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s\n",
+				file.Name, file.Size, file.PieceSize, file.Key)
+			WriteLog("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s\n",
 				file.Name, file.Size, file.PieceSize, file.Key)
 		}
 		return true, listStruct
@@ -204,6 +222,7 @@ func HaveCheck(message string) (bool, HaveData) {
 			return false, HaveData{}
 		}
 		fmt.Printf("\033[0;34mReceived buffermap for\033[39m: %s (%s)\n", file.Name, file.Key)
+		WriteLog("\033[0;34mReceived buffermap for\033[39m: %s (%s)\n", file.Name, file.Key)
 		return true, HaveData{Key: match[1], BufferMap: StringToBufferMap(buffer)}
 	}
 	return false, HaveData{}
@@ -231,7 +250,8 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 				fmt.Println("Invalid pieces' numbers :", i)
 			}
 		}
-		fmt.Printf("\033[0;34mWanted pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
+		fmt.Printf("\033[0;34mRequested %d pieces for\033[39m: %s (%s)\n", len(pieces), file.Name, file.Key)
+		WriteLog("\033[0;34mRequested %d pieces for\033[39m: %s (%s)\n", len(pieces), file.Name, file.Key)
 		// for _, i := range pieces {
 		// 	fmt.Printf("%d ", i)
 		// }
@@ -280,7 +300,8 @@ func DataCheck(message string) (bool, DataData) {
 			// Check integrity of file if all pieces have been downloaded ?
 
 		}
-		// fmt.Printf("\033[0;34mReceived pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
+		//fmt.Printf("\033[0;34mReceived pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
+		WriteLog("\033[0;34mReceived %d pieces for\033[39m: %s (%s)\n", len(pieces), file.Name, file.Key)
 		// for _, i := range pieces {
 		// fmt.Printf("%d ", i)
 		// }

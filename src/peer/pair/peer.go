@@ -59,10 +59,9 @@ func StartPeer(IP string, Port string, Type string) Peer {
 		Comm:  make(map[string]net.Conn),
 	}
 	peer.Files = tools.FillFilesFromConfig(IP + ":" + Port)
-	if peer.Files == nil {
+	/*if peer.Files == nil {
 		peer.Files = make(map[string]*tools.File)
-	}
-	// fmt.Println(peer.Files)
+	}*/
 	tools.LocalFiles = &peer.Files
 	go peer.startListening()
 	go peer.sendupdate()

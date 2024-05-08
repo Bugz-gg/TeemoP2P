@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"gopkg.in/ini.v1"
@@ -17,9 +18,6 @@ var configMutex sync.Mutex
 
 func FillFilesFromConfig(conn string) map[string]*File {
 	path := GetValueFromConfig("Peer", "path")
-	if path == "" {
-		path = "share"
-	}
 	os.MkdirAll(filepath.Join("./", path), os.FileMode(0777))
 	files, err := searchFiles(path)
 	if err != nil {
@@ -50,15 +48,14 @@ func fillStruct(files []string, conn string) map[string]*File {
 	result := make(map[string]*File)
 	bufferMaps := make(map[string]*BufferMap)
 	for _, filePath := range files {
-		if filePath == "manifest" {
-			fd, _ := os.OpenFile(filePath, os.O_RDWR, os.FileMode(0777))
+		if filepath.Base(filePath) == "manifest" {
+			fd, _ := os.OpenFile(filePath, os.O_RDONLY, os.FileMode(0777))
 			rd := bufio.NewReader(fd)
 			tempTab := []string{"Name", "Size", "PieceSize", "Key"}
 			tempMap := make(map[string]string, 4)
 			for _, i := range tempTab {
-				txt, _ := rd.ReadBytes('\n')
-				tempMap[i] = string(txt)
-
+				txt, _ := rd.ReadString('\n')
+				tempMap[i] = strings.TrimSuffix(txt, "\n")
 			}
 			sz, _ := strconv.ParseUint(tempMap["Size"], 10, 64)
 			psz, _ := strconv.ParseUint(tempMap["PieceSize"], 10, 64)
@@ -73,9 +70,7 @@ func fillStruct(files []string, conn string) map[string]*File {
 			buff := string(txt)
 			buffermap := StringToBufferMap(buff)
 			bufferMaps[fil.Key] = &buffermap
-			if fil.Peers == nil {
-				fil.Peers = make(map[string]*Peer)
-			}
+			fil.Peers = make(map[string]*Peer)
 			fil.Peers["self"] = &Peer{
 				IP:         "",
 				Port:       "",
@@ -111,52 +106,44 @@ func fillStruct(files []string, conn string) map[string]*File {
 		}
 		buffermap := InitBufferMap(fil.Size, fil.PieceSize)
 		bufferMaps[fil.Key] = &buffermap
-		//InitBufferMap(&fil)
-		if fil.Peers == nil {
-			fil.Peers = make(map[string]*Peer)
-		}
+		fil.Peers = make(map[string]*Peer)
 		fil.Peers["self"] = &Peer{
 			IP:         "",
 			Port:       "",
 			BufferMaps: bufferMaps,
 		}
 		fil.Peers[conn] = fil.Peers["self"]
-		// for u := range BufferSize(fil) {
 		for u := range BufferBitSize(fil) {
 			BufferMapWrite(&(*(fil.Peers["self"].BufferMaps)[fil.Key]), u)
 		}
-		// fmt.Println(fil.BufferMap)
 		result[fil.Key] = &fil
 	}
 	return result
 }
 
 func GetValueFromConfig(section string, key string) string {
+	configMutex.Lock()
 	if config == nil {
-		configMutex.Lock()
 		config = make(map[string]map[string]string)
-		configMutex.Unlock()
 	}
 	if config[section] == nil {
-		configMutex.Lock()
 		config[section] = make(map[string]string)
-		configMutex.Unlock()
 	}
 	if config[section][key] != "" {
-		return config[section][key]
+		ret := config[section][key]
+		configMutex.Unlock()
+		return ret
 	}
 	file, err := ini.Load("config.ini")
 	if err != nil {
+		configMutex.Unlock()
 		return err.Error()
 	}
 	sec := file.Section(section)
 
 	valueStr := sec.Key(key).String()
-	configMutex.Lock()
 	config[section][key] = valueStr
-	configMutex.Unlock()
 	if valueStr == "" {
-		configMutex.Lock()
 		defaultValues := map[string]map[string]string{"Peer": {"time_dl_rare_piece": "6000",
 			"max_concurrency":      "2",
 			"max_peers":            "2000",
@@ -164,14 +151,15 @@ func GetValueFromConfig(section string, key string) string {
 			"progress_value":       "2",
 			"update_time":          "120",
 			"timeout":              "5",
+			"response_timeout":     "1",
 			"max_buff_size":        "8392",
 			"default_piece_size":   "2048",
 			"max_message_attempts": "3",
 			"path":                 "share"}}
 		valueStr = defaultValues[section][key]
 		config[section][key] = defaultValues[section][key]
-		configMutex.Unlock()
 	}
+	configMutex.Unlock()
 	return valueStr
 }
 

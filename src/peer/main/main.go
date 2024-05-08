@@ -200,14 +200,18 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 			tmpIndexes = append(tmpIndexes, strconv.Itoa(index))
 			currSize += MyPeer.Files[selectedFile].PieceSize
 			if currSize+100 >= buffSize {
+				peer.ResponsesRemaining.Add(1)
 				peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, "getpieces "+selectedFile+" ["+strings.Join(tmpIndexes, " ")+"]\n")
 				tmpIndexes = []string{}
 				currSize = 0
 			}
 		}
 		if len(tmpIndexes) != 0 {
+			peer.ResponsesRemaining.Add(1)
 			peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, "getpieces "+selectedFile+" ["+strings.Join(tmpIndexes, " ")+"]\n")
 		}
+		go func() { peer.ChannSignal(&peer.ResponsesRemainingUpdated) }()
+		peer.WaitFor(peer.DlDone, true)
 
 		// command := fmt.Sprintf("getpieces %s %v\n", selectedFile, pieces)
 		// peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, command)
@@ -236,6 +240,7 @@ func inputProg() {
 
 	availableCommands := []int{0, 4, 5, 6} // Handle, Connect, Close, Exit
 	for {
+		peer.ResponsesRemaining.Store(0)
 		var downloadables []tools.File
 		for _, file := range tools.RemoteFiles {
 			if len(file.Peers) > 0 {
@@ -260,14 +265,17 @@ func inputProg() {
 		fmt.Println("(0) Exit")
 
 		fmt.Print("\u001B[92mEnter a command:\u001B[39m ")
-		command, _ := strconv.Atoi(readInput())
+		command, err := strconv.Atoi(readInput())
+		if err != nil {
+			command = -1
+		}
 		switch command {
 		case 1: // Look
 			if !slices.Contains(availableCommands, 1) {
 				continue
 			}
 			fmt.Println("\u001B[92mPerforming 'look' command...\u001B[39m")
-			fmt.Print("Which criteria you are looking for: ")
+			fmt.Print("Which criteria you are looking for: ") // What if wrong format ?
 			commandInput := readInput()
 			if commandInput == "" {
 				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look []\n")
@@ -305,12 +313,11 @@ func inputProg() {
 				if !slices.Contains(availableCommands, 3) {
 					continue
 				}
-				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look []\n") // ?????????
+				//peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look []\n") // ?????????
 				fmt.Print("\u001B[92mHere all the files you can download :\u001B[39m \n")
 				var remoteFileKeys []string
 				i := 0
 				for _, file := range downloadables {
-					//file := tools.RemoteFiles[key]
 					fmt.Printf("(%d) %s %s (%d)\n", i, file.Name, file.Key, file.Size)
 					remoteFileKeys = append(remoteFileKeys, file.Key)
 					i++
@@ -325,7 +332,11 @@ func inputProg() {
 				}
 
 				selectedFile := remoteFileKeys[fileNum]
-				MyPeer.Downloading(selectedFile)
+				go MyPeer.Downloading(selectedFile)
+				success := peer.WaitFor(peer.DlDone, true)
+				if !success {
+					fmt.Println("\u001B[91mDownload time out\u001B[39m")
+				}
 			}
 
 		case 4: // Handle
@@ -363,10 +374,13 @@ func inputProg() {
 		default:
 			fmt.Println("\u001B[91mCommand not found. Available commands: lp (launch a peer), download, connect, handle, close, exit\u001B[39m")
 		}
+
 	}
 }
 
 func main() {
+	peer.DlDone = make(chan struct{})
+	peer.ResponsesRemainingUpdated = make(chan struct{})
 	sigchnl := make(chan os.Signal, 1)
 	signal.Notify(sigchnl, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

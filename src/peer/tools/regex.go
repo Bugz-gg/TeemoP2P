@@ -186,7 +186,7 @@ func ListCheck(message string) (bool, ListData) {
 		for _, file := range listStruct.Files {
 			fmt.Printf("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s\n",
 				file.Name, file.Size, file.PieceSize, file.Key)
-			WriteLog("\033[0;34mFilename\033[39m: %s, \033[0;34mSize\033[39m: %d(%d), \033[0;34mKey\033[39m:%s\n",
+			WriteLog("Filename: %s, Size: %d(%d), Key:%s\n",
 				file.Name, file.Size, file.PieceSize, file.Key)
 		}
 		return true, listStruct
@@ -222,7 +222,7 @@ func HaveCheck(message string) (bool, HaveData) {
 			return false, HaveData{}
 		}
 		fmt.Printf("\033[0;34mReceived buffermap for\033[39m: %s (%s)\n", file.Name, file.Key)
-		WriteLog("\033[0;34mReceived buffermap for\033[39m: %s (%s)\n", file.Name, file.Key)
+		WriteLog("Received buffermap for: %s (%s)\n", file.Name, file.Key)
 		return true, HaveData{Key: match[1], BufferMap: StringToBufferMap(buffer)}
 	}
 	return false, HaveData{}
@@ -251,7 +251,7 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 			}
 		}
 		fmt.Printf("\033[0;34mRequested %d pieces for\033[39m: %s (%s)\n", len(pieces), file.Name, file.Key)
-		WriteLog("\033[0;34mRequested %d pieces for\033[39m: %s (%s)\n", len(pieces), file.Name, file.Key)
+		WriteLog("Requested %d pieces for: %s (%s)\n", len(pieces), file.Name, file.Key)
 		// for _, i := range pieces {
 		// 	fmt.Printf("%d ", i)
 		// }
@@ -301,7 +301,7 @@ func DataCheck(message string) (bool, DataData) {
 
 		}
 		//fmt.Printf("\033[0;34mReceived pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
-		WriteLog("\033[0;34mReceived %d pieces for\033[39m: %s (%s)\n", len(pieces), file.Name, file.Key)
+		WriteLog("Received %d pieces for: %s (%s)\n", len(pieces), file.Name, file.Key)
 		// for _, i := range pieces {
 		// fmt.Printf("%d ", i)
 		// }

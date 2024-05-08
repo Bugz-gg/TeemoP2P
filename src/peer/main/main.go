@@ -252,7 +252,7 @@ func inputProg() {
 			fmt.Println("(1) Look for files")
 			if len(tools.RemoteFiles) > 0 {
 				availableCommands = append(availableCommands, 2)
-				fmt.Println("(2) Get peers' infos")
+				fmt.Println("(2) Get peers' infos about a file")
 			}
 		}
 		if len(downloadables) > 0 {
@@ -279,9 +279,10 @@ func inputProg() {
 			commandInput := readInput()
 			if commandInput == "" {
 				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look []\n")
-			} else {
+			} else { // TODO Check if commandInput is valid
 				peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, "look ["+commandInput+"]\n")
 			}
+			fmt.Println("\033[0;35mDon't forget to get peer's infos on the files you're interested in.\033[0m")
 		case 2: // Getfile
 			if !slices.Contains(availableCommands, 2) {
 				continue
@@ -307,6 +308,7 @@ func inputProg() {
 
 			fmt.Printf("\u001B[92mPerforming 'getfile' command for file %s...\u001B[39m\n", selectedFile)
 			peer.WriteReadConnection(MyPeer.Comm["tracker"], &MyPeer, fmt.Sprintf("getfile %s\n", selectedFile))
+			fmt.Println("\033[0;35mInfos fetched. You can now download the file.\033[0m")
 
 		case 3: // Download
 			if !MyPeer.IsEmpty() { // Not sure if the test is necessary.

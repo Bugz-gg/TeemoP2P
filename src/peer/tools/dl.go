@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,11 +18,13 @@ var config map[string]map[string]string
 var configMutex sync.Mutex
 
 func FillFilesFromConfig(conn string) map[string]*File {
+	fmt.Println("\033[0;36mDetecting shared files...\033[0m")
 	path := GetValueFromConfig("Peer", "path")
 	os.MkdirAll(filepath.Join("./", path), os.FileMode(0777))
 	files, err := searchFiles(path)
 	if err != nil {
-		return nil
+		fmt.Println(err)
+		return make(map[string]*File)
 	}
 
 	return fillStruct(files, conn)
@@ -47,6 +50,8 @@ func searchFiles(path string) ([]string, error) {
 func fillStruct(files []string, conn string) map[string]*File {
 	result := make(map[string]*File)
 	bufferMaps := make(map[string]*BufferMap)
+	ipport := strings.Split(conn, ":")
+	IP, port := ipport[0], ipport[1]
 	for _, filePath := range files {
 		if filepath.Base(filePath) == "manifest" {
 			fd, _ := os.OpenFile(filePath, os.O_RDONLY, os.FileMode(0777))
@@ -71,13 +76,16 @@ func fillStruct(files []string, conn string) map[string]*File {
 			buffermap := StringToBufferMap(buff)
 			bufferMaps[fil.Key] = &buffermap
 			fil.Peers = make(map[string]*Peer)
+
 			fil.Peers["self"] = &Peer{
-				IP:         "",
-				Port:       "",
+				IP:         IP,
+				Port:       port,
 				BufferMaps: bufferMaps,
 			}
 			fil.Peers[conn] = fil.Peers["self"]
 			result[fil.Key] = &fil
+
+			RemoteFiles[tempMap["Key"]] = &fil
 			continue
 
 		}
@@ -87,15 +95,12 @@ func fillStruct(files []string, conn string) map[string]*File {
 		}
 
 		fileSize := fileInfo.Size()
-		pieceSizeStr := GetValueFromConfig("Peer", filepath.Base(filePath))
+		pieceSizeStr := GetValueFromConfig("Peer", "default_piece_size")
 		pieceSize, err := strconv.ParseUint(pieceSizeStr, 10, 64)
 		if err != nil {
-			pieceSizeStr = GetValueFromConfig("Peer", "default_piece_size")
-			pieceSize, err = strconv.ParseUint(pieceSizeStr, 10, 64)
-			if err != nil {
-				return nil
-			}
+			return nil
 		}
+
 		pieceSize = min(pieceSize, uint64(fileSize)) // Conversion to uint64 may cause errors.
 
 		fil := File{
@@ -103,13 +108,14 @@ func fillStruct(files []string, conn string) map[string]*File {
 			Size:      uint64(fileSize), // Same here.
 			PieceSize: pieceSize,
 			Key:       GetMD5Hash(filePath),
+			Complete:  true,
 		}
 		buffermap := InitBufferMap(fil.Size, fil.PieceSize)
 		bufferMaps[fil.Key] = &buffermap
 		fil.Peers = make(map[string]*Peer)
 		fil.Peers["self"] = &Peer{
-			IP:         "",
-			Port:       "",
+			IP:         IP,
+			Port:       port,
 			BufferMaps: bufferMaps,
 		}
 		fil.Peers[conn] = fil.Peers["self"]
@@ -144,7 +150,8 @@ func GetValueFromConfig(section string, key string) string {
 	valueStr := sec.Key(key).String()
 	config[section][key] = valueStr
 	if valueStr == "" {
-		defaultValues := map[string]map[string]string{"Peer": {"time_dl_rare_piece": "6000",
+		defaultValues := map[string]map[string]string{"Peer": {
+			"time_dl_rare_piece":   "6000",
 			"max_concurrency":      "2",
 			"max_peers":            "2000",
 			"max_peers_to_connect": "5",

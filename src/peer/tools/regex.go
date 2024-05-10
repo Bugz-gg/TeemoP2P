@@ -51,7 +51,7 @@ var ListRegex = ListRegexGen()
 
 // InterestedRegexGen provides the function that returns the compiled regex expression for the `interested` message.
 func InterestedRegexGen() (InterestedRegex func() *regexp.Regexp) {
-	interestedPattern := `^interested ([a-zA-Z0-9]{32})$` // Add optional leech if necessary
+	interestedPattern := `^interested ([a-zA-Z0-9]{32})$`
 	interestedRegex := regexp.MustCompile(interestedPattern)
 	return func() *regexp.Regexp {
 		return interestedRegex
@@ -63,7 +63,7 @@ var InterestedRegex = InterestedRegexGen()
 
 // HaveRegexGen provides the function that returns the compiled regex expression for the `have` message.
 func HaveRegexGen() (HaveRegex func() *regexp.Regexp) {
-	havePattern := `^have ([a-zA-Z0-9]{32}) ([01]*)$` // Add optional leech if necessary
+	havePattern := `^have ([a-zA-Z0-9]{32}) ([01]*)$`
 	haveRegex := regexp.MustCompile(havePattern)
 	return func() *regexp.Regexp {
 		return haveRegex
@@ -75,7 +75,7 @@ var HaveRegex = HaveRegexGen()
 
 // GetPiecesRegexGen provides the function that returns the compiled regex expression for the `getpieces` message.
 func GetPiecesRegexGen() (GetPiecesRegex func() *regexp.Regexp) {
-	getPiecesPattern := `^getpieces ([a-zA-Z0-9]{32}) \[([0-9 ]*)\]$` // Add optional leech if necessary
+	getPiecesPattern := `^getpieces ([a-zA-Z0-9]{32}) \[([0-9 ]*)\]$`
 	getPiecesRegex := regexp.MustCompile(getPiecesPattern)
 	return func() *regexp.Regexp {
 		return getPiecesRegex
@@ -87,7 +87,8 @@ var GetPiecesRegex = GetPiecesRegexGen()
 
 // DataRegexGen provides the function that returns the compiled regex expression for the `data` message.
 func DataRegexGen() (DataRegex func() *regexp.Regexp) { // To be tested
-	dataPattern := `^data ([a-zA-Z0-9]{32}) \[((?:[0-9]*:[01]*| )*)\]$` // Add optional leech if necessary
+	//dataPattern := `^data ([a-zA-Z0-9]{32}) \[((?:[0-9]*:[01]*| )*)\]$`
+	dataPattern := `^data ([a-zA-Z0-9]{32}) \[([\s\S]*)\]$`
 	dataRegex := regexp.MustCompile(dataPattern)
 	return func() *regexp.Regexp {
 		return dataRegex
@@ -250,12 +251,12 @@ func GetPiecesCheck(message string) (bool, GetPiecesData) {
 				fmt.Println("Invalid pieces' numbers :", i)
 			}
 		}
-		fmt.Printf("\033[0;34mRequested %d pieces for\033[39m: %s (%s)\n", len(pieces), file.Name, file.Key)
-		WriteLog("Requested %d pieces for: %s (%s)\n", len(pieces), file.Name, file.Key)
-		// for _, i := range pieces {
-		// 	fmt.Printf("%d ", i)
-		// }
-		// fmt.Printf("\n")
+		fmt.Printf("\033[0;34mSending %d piece(s) for\033[39m: %s (%s)", len(pieces), file.Name, file.Key)
+		WriteLog("Request of %d piece(s) for: %s (%s)\n", len(pieces), file.Name, file.Key)
+		for _, i := range pieces {
+			fmt.Printf(" %d", i)
+		}
+		fmt.Printf("\n")
 		return true, GetPiecesData{Key: match[1], Pieces: pieces}
 	}
 	return false, GetPiecesData{}
@@ -274,38 +275,72 @@ func DataCheck(message string) (bool, DataData) {
 			(*LocalFiles)[match[1]] = &File{Name: rFile.Name, Size: rFile.Size, PieceSize: rFile.PieceSize, Key: match[1]}
 			//InitBufferMap((*LocalFiles)[match[1]])
 		}
-		piecesdata := strings.Split(match[2], " ")
-
 		file := (*LocalFiles)[match[1]]
 		piecesize := file.PieceSize
 		var pieces []Piece
-		for _, data := range piecesdata {
-			piece := strings.Split(data, ":")
+		/*
+			piecesdata := strings.Split(match[2], " ")
+
+			for _, data := range piecesdata {
+				piece := strings.Split(data, ":")
+				index, _ := strconv.ParseUint(piece[0], 10, 64)
+				if index < 0 || index >= BufferBitSize(*file) { //file.BufferMapLength {
+					fmt.Printf("Out or range index received. (%d)\n", index)
+					return false, DataData{}
+				}
+				if ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, index) {
+					fmt.Printf("Already have the piece at index %d.\n", index)
+					continue
+				}
+				if uint64(len(piece[1])) != piecesize { // len function may not be able to return uint64 correctly
+					fmt.Println("Wrong piece size received.")
+					return false, DataData{}
+				}
+				pieces = append(pieces, Piece{Index: index, Data: Data{[]byte(piece[1])}})
+			}*/
+		piecesdata := match[2]
+		//fmt.Println(piecesdata)
+
+		for len(piecesdata) > 0 {
+			piece := strings.SplitN(piecesdata, ":", 2)
 			index, _ := strconv.ParseUint(piece[0], 10, 64)
 			if index < 0 || index >= BufferBitSize(*file) { //file.BufferMapLength {
 				fmt.Printf("Out or range index received. (%d)\n", index)
 				return false, DataData{}
 			}
-			// Make initialize self with id ?
-			if ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, index) {
-				fmt.Printf("Already have the piece at index %d.\n", index)
-				//return false, DataData{}
-				continue
-			}
-			if uint64(len(piece[1])) != piecesize*8 { // len function may not be able to return uint64 correctly
+			if uint64(len(piece[1])) < piecesize { // len function may not be able to return uint64 correctly
 				fmt.Println("Wrong piece size received.")
 				return false, DataData{}
 			}
-			pieces = append(pieces, Piece{Index: index, Data: StringToData(piece[1])})
-			// Check integrity of file if all pieces have been downloaded ?
+			data := piece[1][:piecesize]
+			if uint64(len(piece[1])) > piecesize {
+				piecesdata = piece[1][piecesize+1:]
+				if len(piecesdata) > 0 && piece[1][piecesize] != ' ' {
+					fmt.Println("Invalid format.")
+					return false, DataData{}
+				}
+			} else {
+				piecesdata = ""
+			}
+			if ByteArrayCheck((*LocalFiles)[match[1]].Peers["self"].BufferMaps[match[1]].BitSequence, index) {
+				fmt.Printf("Already have the piece at index %d.\n", index)
+				continue
+			}
 
+			pieces = append(pieces, Piece{Index: index, Data: Data{[]byte(data)}})
 		}
+
 		//fmt.Printf("\033[0;34mReceived pieces for\033[39m: %s (%s)\n", file.Name, file.Key)
-		WriteLog("Received %d pieces for: %s (%s)\n", len(pieces), file.Name, file.Key)
-		// for _, i := range pieces {
-		// fmt.Printf("%d ", i)
-		// }
-		// fmt.Printf("\n")
+		WriteLog("Received %d piece(s) for %s: %d%s\n", len(pieces), file.Name, file.Key, pieces[0].Index, func() string {
+			if len(pieces) > 0 {
+				return ", ..."
+			}
+			return ""
+		}())
+		/*for i, _ := range pieces {
+			fmt.Println("%d ", i)
+		}
+		fmt.Println("\n")*/
 		return true, DataData{Key: match[1], Pieces: pieces}
 	}
 	return false, DataData{}

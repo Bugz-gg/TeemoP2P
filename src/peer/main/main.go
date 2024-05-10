@@ -21,6 +21,13 @@ func sleep() {
 	time.Sleep(time.Second)
 }
 
+func getMapSoleValue(m map[string]*tools.Peer) *tools.Peer {
+	for _, value := range m {
+		return value
+	}
+	return nil
+}
+
 func readInput() string {
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')
@@ -45,6 +52,8 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 	}
 
 	selectedPeer := peerList[peerNum]
+	if selectedPeer == "" {
+	}
 	fmt.Println("\u001B[92mAvailable commands:\u001B[39m")
 	if selectedPeer == peer.GetConfig().IP+":"+peer.GetConfig().Port || selectedPeer == "tracker" {
 		fmt.Println("\u001B[96m(0) look\u001B[39m")
@@ -211,7 +220,7 @@ func handlePeer(MyPeer *peer.Peer, action string) {
 			peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, "getpieces "+selectedFile+" ["+strings.Join(tmpIndexes, " ")+"]\n")
 		}
 		go func() { peer.ChannSignal(&peer.ResponsesRemainingUpdated) }()
-		peer.WaitFor(peer.DlDone, true)
+		peer.WaitFor(&peer.DlDone, true, false, time.Second)
 
 		// command := fmt.Sprintf("getpieces %s %v\n", selectedFile, pieces)
 		// peer.WriteReadConnection(MyPeer.Comm[selectedPeer], MyPeer, command)
@@ -243,7 +252,7 @@ func inputProg() {
 		peer.ResponsesRemaining.Store(0)
 		var downloadables []tools.File
 		for _, file := range tools.RemoteFiles {
-			if len(file.Peers) > 0 {
+			if len(file.Peers) > 1 || (len(file.Peers) == 1 && (getMapSoleValue(file.Peers).IP != MyPeer.IP || getMapSoleValue(file.Peers).Port != MyPeer.Port)) {
 				downloadables = append(downloadables, *file)
 			}
 		}
@@ -334,8 +343,13 @@ func inputProg() {
 				}
 
 				selectedFile := remoteFileKeys[fileNum]
+				if len(tools.RemoteFiles[selectedFile].Peers) == 0 {
+					break
+				}
 				go MyPeer.Downloading(selectedFile)
-				success := peer.WaitFor(peer.DlDone, true)
+				peer.DlFile["file"].Close()
+				peer.DlFile["manifest"].Close()
+				success := peer.WaitFor(&peer.DlDoneComm, true, false, time.Second)
 				if !success {
 					fmt.Println("\u001B[91mDownload time out\u001B[39m")
 				}
@@ -382,7 +396,10 @@ func inputProg() {
 
 func main() {
 	peer.DlDone = make(chan struct{})
+	peer.DlDoneComm = make(chan struct{})
 	peer.ResponsesRemainingUpdated = make(chan struct{})
+	peer.DlFile = make(map[string]*os.File)
+	peer.ServerOpenedFiles = make(map[string]peer.FileFd)
 	sigchnl := make(chan os.Signal, 1)
 	signal.Notify(sigchnl, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

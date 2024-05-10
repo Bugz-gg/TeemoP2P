@@ -69,6 +69,7 @@ func ArrayCheck(buff BufferMap) bool {
 // BufferMapWrite uses ByteArrayWrite to write a 1 at the `index` position.
 func BufferMapWrite(bufferMap *BufferMap, index uint64) {
 	ByteArrayWrite(&(bufferMap.BitSequence), index)
+	bufferMap.Count++
 }
 
 // BufferMapErase uses ByteArrayErase to write a 0 at the `index` position.
@@ -77,7 +78,7 @@ func BufferMapErase(bufferMap *BufferMap, index uint64) {
 }
 
 // BufferMapCopy copies a BufferMap into another.
-func BufferMapCopy(dst **BufferMap, src *BufferMap) {
+func BufferMapCopy(dst **BufferMap, src *BufferMap) { // No need to copy Count as this is used for other peers
 	if *dst == nil {
 		*dst = &BufferMap{Length: src.Length, BitSequence: make([]byte, (src.Length-1)/8+1)}
 	}
@@ -94,14 +95,17 @@ func BufferMapCopy(dst **BufferMap, src *BufferMap) {
 // StringToBufferMap transforms a string of `0` and `1` into a BufferMap.
 func StringToBufferMap(str string) BufferMap {
 	array := make([]byte, (len(str)-1)/8+1)
+	var count uint64 = 0
 	for index, char := range str {
 		if char == '1' {
 			ByteArrayWrite(&array, uint64(index))
+			count++
 		}
 	}
-	return BufferMap{Length: uint64(len(str)), BitSequence: array} // len may not be able to return uint64 correctly
+	return BufferMap{Length: uint64(len(str)), BitSequence: array, Count: count} // len may not be able to return uint64 correctly
 }
 
+/*
 // StringToData transforms a string of `0` and `1` into a Data.
 func StringToData(str string) Data {
 	array := make([]byte, (len(str)-1)/8+1)
@@ -111,7 +115,7 @@ func StringToData(str string) Data {
 		}
 	}
 	return Data{Length: len(str) / 8, BitSequence: array}
-}
+}*/
 
 // BufferMapToString transforms a BufferMap into a string of `0` and `1`.
 func BufferMapToString(bufferMap BufferMap) string {

@@ -17,6 +17,30 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type FileFd struct {
+	File *os.File
+	Chan chan struct{}
+}
+
+var ServerOpenedFiles map[string]FileFd
+
+func KeepAlive(sig *chan struct{}, key string) {
+	timer := time.NewTimer(15 * time.Second)
+	for {
+		select {
+		case <-*sig:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(15 * time.Second)
+		case <-timer.C:
+			delete(ServerOpenedFiles, key)
+			fmt.Println("\033[0;36mDeleted file descriptor after 15 seconds of inactivity.\033[0m")
+			return
+		}
+	}
+}
+
 func (p *Peer) Close(t string) {
 	fmt.Printf("[\u001B[0;33m%s\u001B[39m] Connection closed\n", t)
 	tools.WriteLog("[%s] Connection closed\n", t)
@@ -76,20 +100,31 @@ func worker(jobs chan Job, p *Peer) {
 			//fmt.Println(conn.RemoteAddr().String(), ":", mess)
 			valid, data := tools.GetPiecesCheck(mess)
 			if valid {
-				fdf, err := os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_RDWR, os.FileMode(0777))
-				if err != nil {
-					errorCheck(err)
-					fdf, err = os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name, "/file"), os.O_RDWR, os.FileMode(0777))
-					errorCheck(err)
+				var fdf *os.File
+				var err error
+				if entry, valid := ServerOpenedFiles[data.Key]; valid {
+					fdf = entry.File
+					ChannSignal(&entry.Chan) // Pass the address of the channel
+				} else {
+					fdf, err = os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name), os.O_RDONLY, os.FileMode(0777))
+					if err != nil {
+						errorCheck(err)
+						fdf, err = os.OpenFile(filepath.Join(tools.GetValueFromConfig("Peer", "path"), "/"+p.Files[data.Key].Name, "/file"), os.O_RDONLY, os.FileMode(0777))
+						errorCheck(err)
+					}
+					channel := make(chan struct{})                                 // Create a channel directly
+					ServerOpenedFiles[data.Key] = FileFd{File: fdf, Chan: channel} // Pass the channel, not its address
+					go KeepAlive(&channel, data.Key)                               // Pass the channel, not its address
 				}
 				response := "data " + data.Key + " ["
 				for _, piece := range data.Pieces {
 					_, err := fdf.Seek(int64(uint64(piece)*p.Files[data.Key].PieceSize), 0)
 					errorCheck(err)
-					// tempBuff := make([]byte, p.Files[data.Key].PieceSize)
-					tempBuff := tools.BufferMap{Length: p.Files[data.Key].PieceSize * 8, BitSequence: make([]byte, p.Files[data.Key].PieceSize*8)}
-					fdf.Read(tempBuff.BitSequence)
-					response += strconv.Itoa(piece) + ":" + tools.BufferMapToString(tempBuff) + " "
+					tempBuff := make([]byte, p.Files[data.Key].PieceSize)
+					//tempBuff := tools.BufferMap{Length: p.Files[data.Key].PieceSize * 8, BitSequence: make([]byte, p.Files[data.Key].PieceSize*8)}
+					fdf.Read(tempBuff)
+					//response += strconv.Itoa(piece) + ":" + tools.BufferMapToString(tempBuff) + " "
+					response += strconv.Itoa(piece) + ":" + string(tempBuff) + " "
 					// tempBuff := make([]byte, p.Files[data.Key].PieceSize)
 					// fdf.Read(tempBuff)
 					// response += strconv.Itoa(piece) + ":" + string(tempBuff) + " "
@@ -163,7 +198,7 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 	}
 	defer l.Close()
 
-	fmt.Println("Server listening on port", p.Port)
+	fmt.Printf("\033[0;32mServer listening on port %s\033[0m\n", p.Port)
 	tools.WriteLog("Server listening on port: %s\n", p.Port)
 
 	epfd, err := unix.EpollCreate1(0)
@@ -242,12 +277,16 @@ func (p *Peer) startListening() { // You are stuck here if the IP is not valid.
 						buf := make([]byte, buffSize)
 						var err error = nil
 						var n int
-						for len(data) == 0 || data[len(data)-1] != '\n' || err != nil {
+						isData := false
+						// TODO do a better fix ?
+						for len(data) == 0 || (isData && data[len(data)-2:] != "]\n") || data[len(data)-1] != '\n' || err != nil {
 							conn.SetReadDeadline(time.Now().Add(time.Duration(float64(100) * math.Pow(10, 9))))
 							fd, err = conn.Read(buf)
 							n += fd
-							// errorCheck(nerr)
 							data += string(buf[:fd])
+							if len(data) > 5 && data[:5] == "data " {
+								isData = true
+							}
 						}
 						conn.SetReadDeadline(time.Time{})
 						jobs <- Job{conn, data}

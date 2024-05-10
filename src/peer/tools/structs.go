@@ -7,6 +7,7 @@ type File struct {
 	PieceSize uint64
 	Key       string
 	Peers     map[string]*Peer // Conn.Addr
+	Complete  bool             // Works as long as the default value is false
 } //BufferMap BufferMap
 
 // Piece contains the data about a piece (the actual data).
@@ -19,8 +20,8 @@ type Piece struct {
 // The `Length` attribute is the length of the bit sequence, not of the `BitSequence` array, which is padded to the byte.
 // Not to be confused with the BufferMap struct which contains the bits telling whether a peer has pieces.
 type Data struct {
-	Length      int
-	BitSequence []byte
+	//Length int
+	String []byte
 }
 
 // ListData is the struct returned by ListCheck.
@@ -69,6 +70,7 @@ type Peer struct {
 type BufferMap struct {
 	Length      uint64
 	BitSequence []byte
+	Count       uint64 // An estimation of the number of owned pieces
 }
 
 // FileCmp tells if two File are equal.
@@ -99,6 +101,7 @@ func HaveCmp(hD1 HaveData, hD2 HaveData) bool {
 	return hD1.Key == hD2.Key && BufferMapCmp(hD1.BufferMap, hD2.BufferMap)
 }
 
+/*
 // DataStructCmp tells if two Data are equal.
 func DataStructCmp(d1 Data, d2 Data) bool {
 	if d1.Length != d2.Length {
@@ -110,6 +113,11 @@ func DataStructCmp(d1 Data, d2 Data) bool {
 		}
 	}
 	return true
+}*/
+
+// DataStructCmp tells if two Data are equal.
+func DataStructCmp(d1 Data, d2 Data) bool {
+	return string(d1.String) == string(d2.String)
 }
 
 // PieceCmp tells if two Piece are equal.

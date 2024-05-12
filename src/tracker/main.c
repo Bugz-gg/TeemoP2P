@@ -173,7 +173,7 @@ void handle_client_connection(void *newsockfd_void_ptr) {
             break;
     }
 
-    buffer[strcspn(buffer, "\r\n")] = 0;
+    //buffer[strcspn(buffer, "\r\n")] = 0;
     if (strcmp(buffer, "exit") == 0) {
         printf("[\033[0;33m%s:%d\033[39m] Client requested to disconnect.\n", clientip, port);
         write_log("[%s:%d] Client requested to disconnect.\n", clientip, port);

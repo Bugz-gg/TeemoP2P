@@ -39,7 +39,7 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 
 // ListRegexGen provides the function that returns the compiled regex expression for the `list` message.
 func ListRegexGen() (ListRegex func() *regexp.Regexp) {
-	listPattern := `^list \[(.*)\]$`
+	listPattern := `(?m)^list \[(.*)\][\r]?\n$`
 	listRegex := regexp.MustCompile(listPattern)
 	return func() *regexp.Regexp {
 		return listRegex
@@ -51,7 +51,7 @@ var ListRegex = ListRegexGen()
 
 // InterestedRegexGen provides the function that returns the compiled regex expression for the `interested` message.
 func InterestedRegexGen() (InterestedRegex func() *regexp.Regexp) {
-	interestedPattern := `^interested ([a-zA-Z0-9]{32})$`
+	interestedPattern := `(?m)^interested ([a-zA-Z0-9]{32})[\r]?\n$`
 	interestedRegex := regexp.MustCompile(interestedPattern)
 	return func() *regexp.Regexp {
 		return interestedRegex
@@ -63,7 +63,7 @@ var InterestedRegex = InterestedRegexGen()
 
 // HaveRegexGen provides the function that returns the compiled regex expression for the `have` message.
 func HaveRegexGen() (HaveRegex func() *regexp.Regexp) {
-	havePattern := `^have ([a-zA-Z0-9]{32}) ([01]*)$`
+	havePattern := `(?m)^have ([a-zA-Z0-9]{32}) ([01]*)[\r]?\n$`
 	haveRegex := regexp.MustCompile(havePattern)
 	return func() *regexp.Regexp {
 		return haveRegex
@@ -75,7 +75,7 @@ var HaveRegex = HaveRegexGen()
 
 // GetPiecesRegexGen provides the function that returns the compiled regex expression for the `getpieces` message.
 func GetPiecesRegexGen() (GetPiecesRegex func() *regexp.Regexp) {
-	getPiecesPattern := `^getpieces ([a-zA-Z0-9]{32}) \[([0-9 ]*)\]$`
+	getPiecesPattern := `(?m)^getpieces ([a-zA-Z0-9]{32}) \[([0-9 ]*)\][\r]?\n$`
 	getPiecesRegex := regexp.MustCompile(getPiecesPattern)
 	return func() *regexp.Regexp {
 		return getPiecesRegex
@@ -88,7 +88,7 @@ var GetPiecesRegex = GetPiecesRegexGen()
 // DataRegexGen provides the function that returns the compiled regex expression for the `data` message.
 func DataRegexGen() (DataRegex func() *regexp.Regexp) { // To be tested
 	//dataPattern := `^data ([a-zA-Z0-9]{32}) \[((?:[0-9]*:[01]*| )*)\]$`
-	dataPattern := `^data ([a-zA-Z0-9]{32}) \[([\s\S]*)\]$`
+	dataPattern := `(?m)^data ([a-zA-Z0-9]{32}) \[([\s\S]*)\][\r]?\n$`
 	dataRegex := regexp.MustCompile(dataPattern)
 	return func() *regexp.Regexp {
 		return dataRegex
@@ -100,7 +100,7 @@ var DataRegex = DataRegexGen()
 
 // PeersRegexGen provides the function that returns the compiled regex expression for the `peers` message.
 func PeersRegexGen() (PeersRegex func() *regexp.Regexp) { // IPv4
-	peersPattern := `^peers ([a-zA-Z0-9]{32}) \[((?:[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+| )*)\]$`
+	peersPattern := `(?m)^peers ([a-zA-Z0-9]{32}) \[((?:[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+| )*)\][\r]?\n$`
 	peersRegex := regexp.MustCompile(peersPattern)
 	return func() *regexp.Regexp {
 		return peersRegex

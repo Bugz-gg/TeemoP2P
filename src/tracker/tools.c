@@ -32,7 +32,7 @@ regex_t *announce_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^announce listen ([0-9]+) seed \\[((.+ [0-9]+ [0-9]+ [a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
+    char *pattern = "^announce listen ([0-9]+) seed \\[((.+ [0-9]+ [0-9]+ [a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?(\r\n|\n)$";
     if (regcomp(regex, pattern, REG_EXTENDED)) {
         fprintf(stderr, "Failed to compile `announce` regular expression\n");
     }
@@ -44,7 +44,7 @@ regex_t *look_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^look \\[(([a-z]+(<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\\]$";
+    char *pattern = "^look \\[(([a-z]+(<|<=|!=|=|>|>=)\"[a-zA-Z0-9]*\"| )*)\\](\r\n?|\n)$";
     int ret = regcomp(regex, pattern, REG_EXTENDED);
     if (ret) {
         char error_message[100];
@@ -71,7 +71,7 @@ regex_t *getfile_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^getfile ([a-zA-Z0-9]{32})$";
+    char *pattern = "^getfile ([a-zA-Z0-9]{32})(\r\n?|\n)$";
     int ret = regcomp(regex, pattern, REG_EXTENDED);
     if (ret) {
         char error_message[100];
@@ -86,7 +86,7 @@ regex_t *update_regex() {
     if (regex != NULL)
         return regex;
     regex = malloc(sizeof(regex_t));
-    char *pattern = "^update seed \\[(([a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?$";
+    char *pattern = "^update seed \\[(([a-zA-Z0-9]{32}| )*)\\]( leech \\[(([a-zA-Z0-9]{32}| )*)\\])?(\r\n?|\n)$";
     int ret = regcomp(regex, pattern, REG_EXTENDED);
     if (ret) {
         char error_message[100];

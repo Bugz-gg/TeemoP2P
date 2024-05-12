@@ -73,7 +73,7 @@ func worker(jobs chan Job, p *Peer) {
 		}
 
 		mess := data
-		mess = strings.Split(mess, "\n")[0]
+		// mess = strings.Split(mess, "\n")[0]
 		input := strings.Split(mess, " ")[0]
 
 		// fmt.Printf("[\u001B[0;33m%s\u001B[39m]: %s\n", conn.RemoteAddr().String(), mess)

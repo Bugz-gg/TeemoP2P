@@ -347,7 +347,7 @@ func WriteReadConnection(conn net.Conn, p *Peer, mess ...string) {
 	conn.SetReadDeadline(time.Time{})
 	if n > 0 {
 		mess := eom
-		mess = strings.TrimSuffix(mess, "\n")
+		//mess = strings.TrimSuffix(mess, "\n")
 		input := strings.Split(mess, " ")[0]
 		// fmt.Printf("[\u001B[0;33m%s\u001B[39m]:%s\n", conn.RemoteAddr().String(), mess)
 		//tools.WriteLog("%s:%s\n", conn.RemoteAddr().String(), mess)

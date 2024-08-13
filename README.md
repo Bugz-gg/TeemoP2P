@@ -6,10 +6,7 @@ The project is based on a protocol provided by our instructor, which has some li
 
 ## Video Demonstration
 
-<video width="640" height="480" controls>
-  <source src="./Eirb2sharevideo.mov" type="video/mov">
-</video>
-
+Click [here](https://www.ibechoual-portfolio.codes/work/eirb2share).
 
 ## Installation and Usage
 

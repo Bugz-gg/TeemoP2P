@@ -6,7 +6,7 @@ The project is based on a protocol provided by our instructor, which has some li
 
 ## Video Demonstration
 
-Click [here](https://www.ibechoual-portfolio.codes/work/eirb2share).
+Click [here](https://portfolio.ilyes-bechoual.com/work/eirb2share).
 
 ## Installation and Usage
 
